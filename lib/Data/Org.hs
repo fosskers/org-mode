@@ -8,6 +8,10 @@ module Data.Org
   , Language(..)
     -- * Parser
   , org
+    -- * Pretty Printing
+  , prettyOrgs
+  , prettyOrg
+  , prettyWords
   ) where
 
 import           Control.Applicative.Combinators.NonEmpty
@@ -15,6 +19,7 @@ import           Control.Monad (void)
 import qualified Data.List.NonEmpty as NEL
 import           Data.Semigroup (sconcat)
 import           Data.Text (Text)
+import qualified Data.Text as T
 import           Data.Void (Void)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
@@ -64,17 +69,16 @@ heading :: Parser Org
 heading = L.lexeme space $ do
   stars <- some $ single '*'
   void $ single ' '
-  l <- line
-  pure $ Heading (NEL.length stars) l
+  Heading (NEL.length stars) <$> line
 
-quote :: Parser Org
-quote = undefined
+-- quote :: Parser Org
+-- quote = undefined
 
-example :: Parser Org
-example = undefined
+-- example :: Parser Org
+-- example = undefined
 
-code :: Parser Org
-code = undefined
+-- code :: Parser Org
+-- code = undefined
 
 paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 line newline
@@ -112,3 +116,28 @@ link = between (single '[') (single ']') $ Link
 
 -- meta :: Parser Org
 -- meta = undefined
+
+--------------------------------------------------------------------------------
+-- Pretty Printing
+
+prettyOrgs :: [Org] -> Text
+prettyOrgs = T.intercalate "\n\n" . map prettyOrg
+
+prettyOrg :: Org -> Text
+prettyOrg o = case o of
+  Heading n ws -> T.unwords $ T.replicate n "*" : NEL.toList (NEL.map prettyWords ws)
+  Paragraph ws -> T.unwords . NEL.toList $ NEL.map prettyWords ws
+  _            -> ""
+
+prettyWords :: Words -> Text
+prettyWords w = case w of
+  Bold t                  -> "*" <> t <> "*"
+  Italic t                -> "/" <> t <> "/"
+  Highlight t             -> "~" <> t <> "~"
+  Underline t             -> "_" <> t <> "_"
+  Verbatim t              -> "=" <> t <> "="
+  Strike t                -> "+" <> t <> "+"
+  Link (URL url) Nothing  -> "[[" <> url <> "]]"
+  Link (URL url) (Just t) -> "[[" <> url <> "][" <> t <> "]]"
+  Image (URL url)         -> "[[" <> url <> "]]"
+  Plain t                 -> t
