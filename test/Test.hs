@@ -15,10 +15,12 @@ import           Text.Megaparsec
 main :: IO ()
 main = do
   simple <- T.readFile "test/simple.org"
-  defaultMain $ suite simple
+  full   <- T.readFile "test/test.org"
+  maybe (pure ()) T.putStrLn $ prettyOrgs <$> parseMaybe org full
+  defaultMain $ suite simple full
 
-suite :: T.Text -> TestTree
-suite simple = testGroup "Unit Tests"
+suite :: T.Text -> T.Text -> TestTree
+suite simple full = testGroup "Unit Tests"
   [ testGroup "Basic Markup"
     [ testCase "Header" $ parseMaybe org "* Header"
       @?= Just [Heading 1 [Plain "Header"]]
@@ -63,5 +65,9 @@ suite simple = testGroup "Unit Tests"
     [ testCase "Simple" $ do
         let !orig = parseMaybe org simple
         (orig >>= parseMaybe org . prettyOrgs) @?= orig
+    , testCase "Full" $ do
+        let !orig = parseMaybe org full
+        (orig >>= parseMaybe org . prettyOrgs) @?= orig
+
     ]
   ]

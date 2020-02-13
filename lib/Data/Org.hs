@@ -60,9 +60,9 @@ newtype Language = Language Text deriving stock (Eq, Show)
 
 type Parser = Parsec Void Text
 
--- TODO Handle whitespace.
 org :: Parser [Org]
-org = many (choice [try heading, try code, try example, try quote, paragraph]) <* eof
+org = L.lexeme space
+  $ many (choice [try heading, try code, try example, try quote, paragraph]) <* eof
 
 heading :: Parser Org
 heading = L.lexeme space $ do
@@ -102,7 +102,8 @@ paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 line newline
 
 line :: Parser (NEL.NonEmpty Words)
-line = some wordChunk
+line = sepBy1 wordChunk (single ' ')
+-- line = some wordChunk
 
 wordChunk :: Parser Words
 wordChunk = choice
@@ -114,7 +115,9 @@ wordChunk = choice
   , Strike    <$> between (single '+') (single '+') (takeWhile1P Nothing (/= '+'))
   , try image
   , link
-  , Plain     <$> takeWhile1P Nothing (/= '\n')
+  -- TODO Not correct! Doesn't find other markups! Go word-by-word.
+  -- TODO There's also an issue with unconsumed whitespace after other markups.
+  , Plain     <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= '\n')
   ]
 
 image :: Parser Words
@@ -143,7 +146,11 @@ prettyOrg :: Org -> Text
 prettyOrg o = case o of
   Heading n ws -> T.unwords $ T.replicate n "*" : NEL.toList (NEL.map prettyWords ws)
   Paragraph ws -> T.unwords . NEL.toList $ NEL.map prettyWords ws
-  _            -> ""
+  Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
+    <> t <> "\n"
+    <> "#+end_src"
+  Quote t -> "#+begin_quote\n" <> t <> "\n" <> "#+end_quote"
+  Example t -> "#+begin_example\n" <> t <> "\n" <> "#+end_example"
 
 prettyWords :: Words -> Text
 prettyWords w = case w of
