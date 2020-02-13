@@ -62,8 +62,7 @@ type Parser = Parsec Void Text
 
 -- TODO Handle whitespace.
 org :: Parser [Org]
--- org = many (choice [heading, quote, example, code, paragraph]) <* eof
-org = many (choice [try heading, paragraph]) <* eof
+org = many (choice [try heading, try code, try example, try quote, paragraph]) <* eof
 
 heading :: Parser Org
 heading = L.lexeme space $ do
@@ -71,14 +70,33 @@ heading = L.lexeme space $ do
   void $ single ' '
   Heading (NEL.length stars) <$> line
 
--- quote :: Parser Org
--- quote = undefined
+quote :: Parser Org
+quote = L.lexeme space $ do
+  void top <* newline
+  ls <- manyTill (takeWhileP Nothing (/= '\n') <* newline) bot
+  pure . Quote $ T.intercalate "\n" ls
+  where
+    top = string "#+" *> (string "BEGIN_QUOTE" <|> string "begin_quote")
+    bot = string "#+" *> (string "END_QUOTE" <|> string "end_quote")
 
--- example :: Parser Org
--- example = undefined
+example :: Parser Org
+example = L.lexeme space $ do
+  void top <* newline
+  ls <- manyTill (takeWhileP Nothing (/= '\n') <* newline) bot
+  pure . Example $ T.intercalate "\n" ls
+  where
+    top = string "#+" *> (string "BEGIN_EXAMPLE" <|> string "begin_example")
+    bot = string "#+" *> (string "END_EXAMPLE" <|> string "end_example")
 
--- code :: Parser Org
--- code = undefined
+code :: Parser Org
+code = L.lexeme space $ do
+  lang <- top *> optional lng <* newline
+  ls <- manyTill (takeWhileP Nothing (/= '\n') <* newline) bot
+  pure . Code (Language <$> lang) $ T.intercalate "\n" ls
+  where
+    top = string "#+" *> (string "BEGIN_SRC" <|> string "begin_src")
+    bot = string "#+" *> (string "END_SRC" <|> string "end_src")
+    lng = single ' '  *> takeWhile1P Nothing (/= '\n')
 
 paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 line newline
@@ -107,8 +125,6 @@ image = between (single '[') (single ']') $
     ext <- string "jpg" <|> string "jpeg" <|> string "png"
     pure . Image . URL $ path <> "." <> ext
 
--- | TODO Image support. For lucid conversion, one will be `a` and the other
--- will be an `img` element.
 link :: Parser Words
 link = between (single '[') (single ']') $ Link
   <$> between (single '[') (single ']') (URL <$> takeWhile1P Nothing (/= ']'))

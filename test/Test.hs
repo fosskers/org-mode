@@ -43,6 +43,22 @@ suite simple = testGroup "Unit Tests"
     , testCase "Image" $ parseMaybe org "[[/path/to/img.jpeg]]"
       @?= Just [Paragraph [Image (URL "/path/to/img.jpeg")]]
     ]
+  , testGroup "Composite Structures"
+    [ testCase "Example" $ parseMaybe org "#+begin_example\nHi!\n\nHo\n#+end_example"
+      @?= Just [Example "Hi!\n\nHo"]
+    , testCase "Example - Empty" $ parseMaybe org "#+begin_example\n#+end_example"
+      @?= Just [Example ""]
+    , testCase "Quote" $ parseMaybe org "#+begin_quote\nHi!\n\nHo\n#+end_quote"
+      @?= Just [Quote "Hi!\n\nHo"]
+    , testCase "Quote - Empty" $ parseMaybe org "#+begin_quote\n#+end_quote"
+      @?= Just [Quote ""]
+    , testCase "Code" $ parseMaybe org "#+begin_src haskell\n1 + 1\n#+end_src"
+      @?= Just [Code (Just $ Language "haskell") "1 + 1"]
+    , testCase "Code - Empty" $ parseMaybe org "#+begin_src haskell\n#+end_src"
+      @?= Just [Code (Just $ Language "haskell") ""]
+    , testCase "Code - No Language" $ parseMaybe org "#+begin_src\n1 + 1\n#+end_src"
+      @?= Just [Code Nothing "1 + 1"]
+    ]
   , testGroup "Full Files"
     [ testCase "Simple" $ do
         let !orig = parseMaybe org simple
