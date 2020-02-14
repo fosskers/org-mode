@@ -42,6 +42,10 @@ Things to do:
 
 - Pet the cat
 - Feed the cat
+- [[https://www.youtube.com/][Watch cat videos]]
+  - Go to site
+  - Click on video
+  - Watch video
 - Water the cat
 
 Farewell.

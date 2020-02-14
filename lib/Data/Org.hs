@@ -4,6 +4,7 @@ module Data.Org
   ( -- * Types
     Org(..)
   , Words(..)
+  , Item(..)
   , URL(..)
   , Language(..)
     -- * Parser
@@ -35,9 +36,12 @@ data Org
   | Quote Text
   | Example Text
   | Code (Maybe Language) Text
-  | List (NonEmpty (NonEmpty Words))
+  | List (NonEmpty Item)
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show)
+
+-- | A line in a bullet-list.
+data Item = Item Int (NonEmpty Words) deriving (Eq, Show)
 
 data Words
   = Bold Text
@@ -48,7 +52,7 @@ data Words
   | Strike Text
   | Link URL (Maybe Text)
   | Image URL
-  | Punctuation Char
+  | Punct Char
   | Plain Text
   deriving stock (Eq, Show)
 
@@ -102,10 +106,13 @@ code = L.lexeme space $ do
     lng = single ' '  *> someTillEnd
 
 list :: Parser Org
-list = L.lexeme space $ List <$> sepEndBy1 item (single '\n')
+list = L.lexeme space $ List <$> sepEndBy1 item newline
 
-item :: Parser (NonEmpty Words)
-item = string "- " *> line
+item :: Parser Item
+item = do
+  leading <- takeWhileP Nothing (== ' ')
+  l <- string "- " *> line
+  pure $ Item (T.length leading `div` 2) l
 
 paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 line newline
@@ -132,9 +139,8 @@ wordChunk = choice
   , try $ Strike      <$> between (single '+') (single '+') (someTill '+') <* pOrS
   , try image
   , link
-  , try $ Punctuation <$> oneOf punc
-  , Plain <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= '\n')
-  ]
+  , try $ Punct       <$> oneOf punc
+  , Plain             <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= '\n') ]
   where
     pOrS :: Parser ()
     pOrS = lookAhead $ void (oneOf $ '\n' : ' ' : punc) <|> eof
@@ -164,8 +170,11 @@ someTillEnd = someTill '\n'
 manyTillEnd :: Parser Text
 manyTillEnd = takeWhileP (Just "Many until the end of the line") (/= '\n')
 
+-- manyTill' :: Char -> Parser Text
+-- manyTill' c = takeWhileP (Just $ "Many until " <> [c]) (/= c)
+
 someTill :: Char -> Parser Text
-someTill c = takeWhile1P (Just "Some until the end of the line") (/= c)
+someTill c = takeWhile1P (Just $ "Some until " <> [c]) (/= c)
 
 --------------------------------------------------------------------------------
 -- Pretty Printing
@@ -177,21 +186,24 @@ prettyOrg :: Org -> Text
 prettyOrg o = case o of
   Heading n ws -> T.unwords $ T.replicate n "*" : NEL.toList (NEL.map prettyWords ws)
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
-    <> t <> "\n"
-    <> "#+end_src"
-  Quote t -> "#+begin_quote\n" <> t <> "\n" <> "#+end_quote"
-  Example t -> "#+begin_example\n" <> t <> "\n" <> "#+end_example"
+    <> t
+    <> "\n#+end_src"
+  Quote t -> "#+begin_quote\n" <> t <> "\n#+end_quote"
+  Example t -> "#+begin_example\n" <> t <> "\n#+end_example"
   Paragraph ht -> par ht
-  List items -> T.intercalate "\n" . map (("- " <>) . par) $ NEL.toList items
+  List items -> T.intercalate "\n" . map f $ NEL.toList items
   where
+    f :: Item -> Text
+    f (Item i ws) = T.replicate (i * 2) " " <> "- " <> par ws
+
     par :: NonEmpty Words -> Text
     par (h :| t) = prettyWords h <> foldMap para t
 
     -- | Stick punctuation directly behind the chars in front of it.
     para :: Words -> Text
     para b = case b of
-      Punctuation _ -> prettyWords b
-      _             -> " " <> prettyWords b
+      Punct _ -> prettyWords b
+      _       -> " " <> prettyWords b
 
 prettyWords :: Words -> Text
 prettyWords w = case w of
@@ -204,5 +216,5 @@ prettyWords w = case w of
   Link (URL url) Nothing  -> "[[" <> url <> "]]"
   Link (URL url) (Just t) -> "[[" <> url <> "][" <> t <> "]]"
   Image (URL url)         -> "[[" <> url <> "]]"
-  Punctuation c           -> T.singleton c
+  Punct c                 -> T.singleton c
   Plain t                 -> t

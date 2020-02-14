@@ -41,3 +41,4 @@ test-suite org-mode-test
     , org-mode
     , tasty        ^>=1.2
     , tasty-hunit  ^>=0.10
+    , pretty-simple
