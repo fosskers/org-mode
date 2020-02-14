@@ -35,3 +35,13 @@ Always keep some cash on hand, you never know.
 * Heading with /markup/
 
 さぁ日本語も入れたらどうなる？
+
+* A simple list
+
+Things to do:
+
+- Pet the cat
+- Feed the cat
+- Water the cat
+
+Farewell.

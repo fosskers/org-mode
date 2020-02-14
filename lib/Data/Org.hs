@@ -35,6 +35,7 @@ data Org
   | Quote Text
   | Example Text
   | Code (Maybe Language) Text
+  | List (NonEmpty (NonEmpty Words))
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show)
 
@@ -64,7 +65,7 @@ type Parser = Parsec Void Text
 
 org :: Parser [Org]
 org = L.lexeme space
-  $ many (choice [try heading, try code, try example, try quote, paragraph]) <* eof
+  $ many (choice [try heading, try code, try example, try quote, try list, paragraph]) <* eof
 
 heading :: Parser Org
 heading = L.lexeme space $ do
@@ -100,6 +101,12 @@ code = L.lexeme space $ do
     bot = string "#+" *> (string "END_SRC" <|> string "end_src")
     lng = single ' '  *> someTillEnd
 
+list :: Parser Org
+list = L.lexeme space $ List <$> sepEndBy1 item (single '\n')
+
+item :: Parser (NonEmpty Words)
+item = string "- " *> line
+
 paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 line newline
 
@@ -126,8 +133,6 @@ wordChunk = choice
   , try image
   , link
   , try $ Punctuation <$> oneOf punc
-  -- TODO Not correct! Doesn't find other markups! Go word-by-word.
-  -- TODO There's also an issue with unconsumed whitespace after other markups.
   , Plain <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= '\n')
   ]
   where
@@ -171,13 +176,17 @@ prettyOrgs = T.intercalate "\n\n" . map prettyOrg
 prettyOrg :: Org -> Text
 prettyOrg o = case o of
   Heading n ws -> T.unwords $ T.replicate n "*" : NEL.toList (NEL.map prettyWords ws)
-  Paragraph (h :| t) -> prettyWords h <> foldMap para t
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
     <> t <> "\n"
     <> "#+end_src"
   Quote t -> "#+begin_quote\n" <> t <> "\n" <> "#+end_quote"
   Example t -> "#+begin_example\n" <> t <> "\n" <> "#+end_example"
+  Paragraph ht -> par ht
+  List items -> T.intercalate "\n" . map (("- " <>) . par) $ NEL.toList items
   where
+    par :: NonEmpty Words -> Text
+    par (h :| t) = prettyWords h <> foldMap para t
+
     -- | Stick punctuation directly behind the chars in front of it.
     para :: Words -> Text
     para b = case b of
