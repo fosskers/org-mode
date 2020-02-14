@@ -11,7 +11,7 @@ license-file:       LICENSE
 build-type:         Simple
 extra-source-files:
   README.md
-  ChangeLog.md
+  CHANGELOG.md
 
 common commons
   default-language:   Haskell2010
