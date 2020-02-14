@@ -1,0 +1,37 @@
+Some text before the initial heading.
+
+* A Heading
+
+** A subheading
+
+*** We have to go deeper
+
+*This is some bold text* within a normal paragraph. However I should tell you
+that the paragraph doesn't end there. It has multiple lines! Oh, but having only
+one would be lonely...
+
+So we'll make /a second one/. How about some code?
+
+#+begin_src haskell
+  -- | Very complicated.
+  main :: IO ()
+  main = putStrLn "org-mode tests"
+#+end_src
+
+** More
+
+And a quote.
+
+#+begin_quote
+Always keep some cash on hand, you never know.
+
+- Albert Einstein
+#+end_quote
+
+* Another Heading!
+
+[[https://www.fosskers.ca/][Check out my website.]] It has a blog with ~code~ samples.
+
+* Heading with /markup/
+
+さぁ日本語も入れたらどうなる？

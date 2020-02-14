@@ -3,6 +3,7 @@
 
 module Main where
 
+import           Data.Maybe (isJust)
 import           Data.Org
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -16,7 +17,7 @@ main :: IO ()
 main = do
   simple <- T.readFile "test/simple.org"
   full   <- T.readFile "test/test.org"
-  maybe (pure ()) T.putStrLn $ prettyOrgs <$> parseMaybe org full
+  maybe (putStrLn "COULDN'T PARSE") T.putStrLn $ prettyOrgs <$> parseMaybe org full
   defaultMain $ suite simple full
 
 suite :: T.Text -> T.Text -> TestTree
@@ -44,6 +45,16 @@ suite simple full = testGroup "Unit Tests"
       @?= Just [Paragraph [Link (URL "https://www.fosskers.ca") Nothing]]
     , testCase "Image" $ parseMaybe org "[[/path/to/img.jpeg]]"
       @?= Just [Paragraph [Image (URL "/path/to/img.jpeg")]]
+    , testCase "Plain" $ parseMaybe org "This is a line"
+      @?= Just [Paragraph [Plain "This", Plain "is", Plain "a", Plain "line"]]
+    ]
+  , testGroup "Markup Edge Cases"
+    [ testCase "Before" $ parseMaybe org "This is *not*bold."
+      @?= Just [Paragraph [Plain "This", Plain "is", Plain "*not*bold."]]
+    , testCase "After" $ parseMaybe org "Neither is *this*here."
+      @?= Just [Paragraph [Plain "Neither", Plain "is", Plain "*this*here."]]
+    , testCase "Punctuation" $ parseMaybe org "*This*, is bold."
+      @?= Just [Paragraph [Bold "This", Punctuation ',', Plain "is", Plain "bold."]]
     ]
   , testGroup "Composite Structures"
     [ testCase "Example" $ parseMaybe org "#+begin_example\nHi!\n\nHo\n#+end_example"
@@ -61,13 +72,18 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Code - No Language" $ parseMaybe org "#+begin_src\n1 + 1\n#+end_src"
       @?= Just [Code Nothing "1 + 1"]
     ]
+  , testGroup "Pretty Printing"
+    [ testCase "Punctuation" $ do
+        let !orig = parseMaybe org "A /B/. C?"
+        (prettyOrgs <$> orig) @?= Just "A /B/. C?"
+    ]
   , testGroup "Full Files"
     [ testCase "Simple" $ do
         let !orig = parseMaybe org simple
+        assertBool "Couldn't parse" $ isJust orig
         (orig >>= parseMaybe org . prettyOrgs) @?= orig
-    , testCase "Full" $ do
-        let !orig = parseMaybe org full
-        (orig >>= parseMaybe org . prettyOrgs) @?= orig
-
+    , testCase "Full" $ case parse org "test.org" full of
+        Left eb -> assertFailure $ errorBundlePretty eb
+        Right r -> parseMaybe org (prettyOrgs r) @?= Just r
     ]
   ]

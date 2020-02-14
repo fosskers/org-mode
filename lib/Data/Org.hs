@@ -14,8 +14,9 @@ module Data.Org
   , prettyWords
   ) where
 
-import           Control.Applicative.Combinators.NonEmpty
+import           Control.Applicative.Combinators.NonEmpty hiding (someTill)
 import           Control.Monad (void)
+import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import           Data.Semigroup (sconcat)
 import           Data.Text (Text)
@@ -30,11 +31,11 @@ import qualified Text.Megaparsec.Char.Lexer as L
 
 -- | An org-mode document tree.
 data Org
-  = Heading Int (NEL.NonEmpty Words)
+  = Heading Int (NonEmpty Words)
   | Quote Text
   | Example Text
   | Code (Maybe Language) Text
-  | Paragraph (NEL.NonEmpty Words)
+  | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show)
 
 data Words
@@ -46,6 +47,7 @@ data Words
   | Strike Text
   | Link URL (Maybe Text)
   | Image URL
+  | Punctuation Char
   | Plain Text
   deriving stock (Eq, Show)
 
@@ -73,7 +75,7 @@ heading = L.lexeme space $ do
 quote :: Parser Org
 quote = L.lexeme space $ do
   void top <* newline
-  ls <- manyTill (takeWhileP Nothing (/= '\n') <* newline) bot
+  ls <- manyTill (manyTillEnd <* newline) bot
   pure . Quote $ T.intercalate "\n" ls
   where
     top = string "#+" *> (string "BEGIN_QUOTE" <|> string "begin_quote")
@@ -82,7 +84,7 @@ quote = L.lexeme space $ do
 example :: Parser Org
 example = L.lexeme space $ do
   void top <* newline
-  ls <- manyTill (takeWhileP Nothing (/= '\n') <* newline) bot
+  ls <- manyTill (manyTillEnd <* newline) bot
   pure . Example $ T.intercalate "\n" ls
   where
     top = string "#+" *> (string "BEGIN_EXAMPLE" <|> string "begin_example")
@@ -91,50 +93,74 @@ example = L.lexeme space $ do
 code :: Parser Org
 code = L.lexeme space $ do
   lang <- top *> optional lng <* newline
-  ls <- manyTill (takeWhileP Nothing (/= '\n') <* newline) bot
+  ls <- manyTill (manyTillEnd <* newline) bot
   pure . Code (Language <$> lang) $ T.intercalate "\n" ls
   where
     top = string "#+" *> (string "BEGIN_SRC" <|> string "begin_src")
     bot = string "#+" *> (string "END_SRC" <|> string "end_src")
-    lng = single ' '  *> takeWhile1P Nothing (/= '\n')
+    lng = single ' '  *> someTillEnd
 
 paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 line newline
 
-line :: Parser (NEL.NonEmpty Words)
-line = sepBy1 wordChunk (single ' ')
--- line = some wordChunk
+line :: Parser (NonEmpty Words)
+line = sepBy1 wordChunk (single ' ' <|> lookAhead (oneOf punc))
 
+-- | RULES
+--
+-- 1. In-lined markup is not recognized: This is not*bold*. Neither is *this*here.
+-- 2. Punctuation immediately after markup close /is/ allowed: *This*, in fact, is bold.
+-- 3. Otherwise, a space, newline or EOF is necessary after the close.
+-- 4. Any char after a link is fine.
+-- 5. When rerendering, a space must not appear between the end of a markup close and
+--    a punctuation/newline character.
+-- 6. But any other character must have a space before it.
 wordChunk :: Parser Words
 wordChunk = choice
-  [ Bold      <$> between (single '*') (single '*') (takeWhile1P Nothing (/= '*'))
-  , Italic    <$> between (single '/') (single '/') (takeWhile1P Nothing (/= '/'))
-  , Highlight <$> between (single '~') (single '~') (takeWhile1P Nothing (/= '~'))
-  , Verbatim  <$> between (single '=') (single '=') (takeWhile1P Nothing (/= '='))
-  , Underline <$> between (single '_') (single '_') (takeWhile1P Nothing (/= '_'))
-  , Strike    <$> between (single '+') (single '+') (takeWhile1P Nothing (/= '+'))
+  [ try $ Bold        <$> between (single '*') (single '*') (someTill '*') <* pOrS
+  , try $ Italic      <$> between (single '/') (single '/') (someTill '/') <* pOrS
+  , try $ Highlight   <$> between (single '~') (single '~') (someTill '~') <* pOrS
+  , try $ Verbatim    <$> between (single '=') (single '=') (someTill '=') <* pOrS
+  , try $ Underline   <$> between (single '_') (single '_') (someTill '_') <* pOrS
+  , try $ Strike      <$> between (single '+') (single '+') (someTill '+') <* pOrS
   , try image
   , link
+  , try $ Punctuation <$> oneOf punc
   -- TODO Not correct! Doesn't find other markups! Go word-by-word.
   -- TODO There's also an issue with unconsumed whitespace after other markups.
-  , Plain     <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= '\n')
+  , Plain <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= '\n')
   ]
+  where
+    pOrS :: Parser ()
+    pOrS = lookAhead $ void (oneOf $ '\n' : ' ' : punc) <|> eof
+
+punc :: String
+punc = ".,!?"
 
 image :: Parser Words
 image = between (single '[') (single ']') $
   between (single '[') (single ']') $ do
-    path <- takeWhile1P Nothing (/= '.')
+    path <- someTill '.'
     void $ single '.'
     ext <- string "jpg" <|> string "jpeg" <|> string "png"
     pure . Image . URL $ path <> "." <> ext
 
 link :: Parser Words
 link = between (single '[') (single ']') $ Link
-  <$> between (single '[') (single ']') (URL <$> takeWhile1P Nothing (/= ']'))
-  <*> optional (between (single '[') (single ']') (takeWhile1P Nothing (/= ']')))
+  <$> between (single '[') (single ']') (URL <$> someTill ']')
+  <*> optional (between (single '[') (single ']') (someTill ']'))
 
 -- meta :: Parser Org
 -- meta = undefined
+
+someTillEnd :: Parser Text
+someTillEnd = someTill '\n'
+
+manyTillEnd :: Parser Text
+manyTillEnd = takeWhileP (Just "Many until the end of the line") (/= '\n')
+
+someTill :: Char -> Parser Text
+someTill c = takeWhile1P (Just "Some until the end of the line") (/= c)
 
 --------------------------------------------------------------------------------
 -- Pretty Printing
@@ -145,12 +171,18 @@ prettyOrgs = T.intercalate "\n\n" . map prettyOrg
 prettyOrg :: Org -> Text
 prettyOrg o = case o of
   Heading n ws -> T.unwords $ T.replicate n "*" : NEL.toList (NEL.map prettyWords ws)
-  Paragraph ws -> T.unwords . NEL.toList $ NEL.map prettyWords ws
+  Paragraph (h :| t) -> prettyWords h <> foldMap para t
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
     <> t <> "\n"
     <> "#+end_src"
   Quote t -> "#+begin_quote\n" <> t <> "\n" <> "#+end_quote"
   Example t -> "#+begin_example\n" <> t <> "\n" <> "#+end_example"
+  where
+    -- | Stick punctuation directly behind the chars in front of it.
+    para :: Words -> Text
+    para b = case b of
+      Punctuation _ -> prettyWords b
+      _             -> " " <> prettyWords b
 
 prettyWords :: Words -> Text
 prettyWords w = case w of
@@ -163,4 +195,5 @@ prettyWords w = case w of
   Link (URL url) Nothing  -> "[[" <> url <> "]]"
   Link (URL url) (Just t) -> "[[" <> url <> "][" <> t <> "]]"
   Image (URL url)         -> "[[" <> url <> "]]"
+  Punctuation c           -> T.singleton c
   Plain t                 -> t
