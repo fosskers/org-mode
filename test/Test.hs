@@ -5,8 +5,10 @@ module Main where
 
 import           Data.Maybe (isJust)
 import           Data.Org
+import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import           Data.Void (Void)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Text.Megaparsec
@@ -58,6 +60,11 @@ suite simple full = testGroup "Unit Tests"
       @?= Just [Paragraph [Plain "Neither", Plain "is", Plain "*this*here."]]
     , testCase "Punctuation" $ parseMaybe org "*This*, is bold."
       @?= Just [Paragraph [Bold "This", Punct ',', Plain "is", Plain "bold."]]
+    , testCase "Line - Plain" $ testPretty (line '\n') "Line" "A" [Plain "A"]
+    , testCase "Line - Wide Gap" $ testPretty (line '\n') "Line" "A   B"
+      [Plain "A", Plain "B"]
+    , testCase "Line - Newline" $ testPretty (line '\n') "Line" "A\n" [Plain "A"]
+    , testCase "Line - Space at end" $ testPretty (line '\n') "Line" "A \n" [Plain "A"]
     ]
   , testGroup "Composite Structures"
     [ testCase "Example" $ parseMaybe org "#+begin_example\nHi!\n\nHo\n#+end_example"
@@ -75,12 +82,13 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Code - No Language" $ parseMaybe org "#+begin_src\n1 + 1\n#+end_src"
       @?= Just [Code Nothing "1 + 1"]
     , testCase "List" $ parseMaybe org "- A\n  - B\n- C"
-      @?= Just [ List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]]
-    , testCase "List - Things after" $ do
-        let! orig = parseMaybe org "- A\n  - B\n- C\n\nD"
-        -- print $ prettyOrgs <$> orig
-        orig @?= Just [ List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]
-                      , Paragraph [Plain "D"]]
+      @?= Just [List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]]
+    , testCase "List - Things after" $ parseMaybe org "- A\n  - B\n- C\n\nD"
+      @?= Just [ List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]
+               , Paragraph [Plain "D"]]
+    , testCase "Table - One Row"
+      $ testPretty table "Table" "| A | B | C |"
+      $ Table [Row [Column [Plain "A"], Column [Plain "B"], Column [Plain "C"]]]
     ]
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do
@@ -99,3 +107,8 @@ suite simple full = testGroup "Unit Tests"
           Right r' -> r' @?= r
     ]
   ]
+
+testPretty :: (Eq a, Show a) => Parsec Void Text a -> String -> Text -> a -> Assertion
+testPretty parser labl src expt = case parse parser labl src of
+  Left eb -> assertFailure $ errorBundlePretty eb
+  Right r -> r @?= expt

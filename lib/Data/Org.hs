@@ -11,6 +11,10 @@ module Data.Org
   , Language(..)
     -- * Parser
   , org
+    -- ** Internal Parsers
+    -- | These are exposed for testing purposes.
+  , table
+  , line
     -- * Pretty Printing
   , prettyOrgs
   , prettyOrg
@@ -127,7 +131,7 @@ list = L.lexeme space $ List <$> sepEndBy1 item newline
 
 item :: Parser Item
 item = do
-  leading <- takeWhileP Nothing (== ' ')
+  leading <- takeWhileP (Just "space") (== ' ')
   l <- string "- " *> line '\n'
   pure $ Item (T.length leading `div` 2) l
 
@@ -152,7 +156,7 @@ table = L.lexeme space $ Table <$> sepEndBy1 row (single '\n')
     row :: Parser Row
     row = do
       void $ single '|'
-      brk <|> (Row <$> sepEndBy1 column (single '|'))
+      brk <|> (Row <$> sepEndBy1 (space *> column) (single '|'))
 
     -- | If the line starts with @|-@, assume its a break regardless of what
     -- chars come after that.
@@ -166,7 +170,7 @@ paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
 
 line :: Char -> Parser (NonEmpty Words)
-line end = sepBy1 (wordChunk end) (single ' ' <|> lookAhead (oneOf punc))
+line end = sepEndBy1 (wordChunk end) (void (someOf ' ') <|> void (lookAhead $ oneOf punc))
 
 -- | RULES
 --
@@ -188,7 +192,7 @@ wordChunk end = choice
   , try image
   , link
   , try $ Punct       <$> oneOf punc
-  , Plain             <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= end) ]
+  , Plain             <$> takeWhile1P (Just "plain text") (\c -> c /= ' ' && c /= end) ]
   where
     pOrS :: Parser ()
     pOrS = lookAhead $ void (oneOf $ end : ' ' : punc) <|> eof
@@ -216,13 +220,17 @@ someTillEnd :: Parser Text
 someTillEnd = someTill '\n'
 
 manyTillEnd :: Parser Text
-manyTillEnd = takeWhileP (Just "Many until the end of the line") (/= '\n')
+manyTillEnd = takeWhileP (Just "many until the end of the line") (/= '\n')
 
 -- manyTill' :: Char -> Parser Text
 -- manyTill' c = takeWhileP (Just $ "Many until " <> [c]) (/= c)
 
 someTill :: Char -> Parser Text
-someTill c = takeWhile1P (Just $ "Some until " <> [c]) (/= c)
+someTill c = takeWhile1P (Just $ "some until " <> [c]) (/= c)
+
+-- | Fast version of `some` specialized to `Text`.
+someOf :: Char -> Parser Text
+someOf c = takeWhile1P (Just $ "some of " <> [c]) (== c)
 
 --------------------------------------------------------------------------------
 -- Pretty Printing
