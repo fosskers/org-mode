@@ -5,6 +5,8 @@ module Data.Org
     Org(..)
   , Words(..)
   , Item(..)
+  , Row(..)
+  , Column(..)
   , URL(..)
   , Language(..)
     -- * Parser
@@ -17,6 +19,7 @@ module Data.Org
 
 import           Control.Applicative.Combinators.NonEmpty hiding (someTill)
 import           Control.Monad (void)
+import           Data.Functor (($>))
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import           Data.Semigroup (sconcat)
@@ -37,11 +40,16 @@ data Org
   | Example Text
   | Code (Maybe Language) Text
   | List (NonEmpty Item)
+  | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show)
 
 -- | A line in a bullet-list.
 data Item = Item Int (NonEmpty Words) deriving (Eq, Show)
+
+data Row = Break | Row (NonEmpty Column) deriving (Eq, Show)
+
+newtype Column = Column (NonEmpty Words) deriving (Eq, Show)
 
 data Words
   = Bold Text
@@ -68,14 +76,23 @@ newtype Language = Language Text deriving stock (Eq, Show)
 type Parser = Parsec Void Text
 
 org :: Parser [Org]
-org = L.lexeme space
-  $ many (choice [try heading, try code, try example, try quote, try list, paragraph]) <* eof
+org = L.lexeme space $ many block <* eof
+  where
+    block :: Parser Org
+    block = choice
+      [ try heading
+      , try code
+      , try example
+      , try quote
+      , try list
+      , try table
+      , paragraph ]
 
 heading :: Parser Org
 heading = L.lexeme space $ do
   stars <- some $ single '*'
   void $ single ' '
-  Heading (NEL.length stars) <$> line
+  Heading (NEL.length stars) <$> line '\n'
 
 quote :: Parser Org
 quote = L.lexeme space $ do
@@ -111,14 +128,45 @@ list = L.lexeme space $ List <$> sepEndBy1 item newline
 item :: Parser Item
 item = do
   leading <- takeWhileP Nothing (== ' ')
-  l <- string "- " *> line
+  l <- string "- " *> line '\n'
   pure $ Item (T.length leading `div` 2) l
 
-paragraph :: Parser Org
-paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 line newline
+{-
+|   | Measurement Date |  kW/h |   Cost |
+|---+------------------+-------+--------|
+| # | 2019 Nov 19      |   132 |  12.47 |
+| # | 2019 Nov 22      | 48.65 |   4.60 |
+| # | 2019 Nov 30      | 91.84 |   8.68 |
+| # | 2019 Dec 15      |   256 |  24.19 |
+| # | 2019 Jan 9       |   380 |  35.91 |
+| # | 2019 Jan 10      | 15.28 |   1.44 |
+| # | 2019 Jan 31      |   285 |  26.93 |
+| # | 2019 Feb 6       | 98.85 |   9.34 |
+|---+------------------+-------+--------|
+| # | Total            |       | 123.56 |
+| ^ |                  |       |  total |
+-}
+table :: Parser Org
+table = L.lexeme space $ Table <$> sepEndBy1 row (single '\n')
+  where
+    row :: Parser Row
+    row = do
+      void $ single '|'
+      brk <|> (Row <$> sepEndBy1 column (single '|'))
 
-line :: Parser (NonEmpty Words)
-line = sepBy1 wordChunk (single ' ' <|> lookAhead (oneOf punc))
+    -- | If the line starts with @|-@, assume its a break regardless of what
+    -- chars come after that.
+    brk :: Parser Row
+    brk = single '-' *> manyTillEnd $> Break
+
+    column :: Parser Column
+    column = Column <$> line '|'
+
+paragraph :: Parser Org
+paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
+
+line :: Char -> Parser (NonEmpty Words)
+line end = sepBy1 (wordChunk end) (single ' ' <|> lookAhead (oneOf punc))
 
 -- | RULES
 --
@@ -129,8 +177,8 @@ line = sepBy1 wordChunk (single ' ' <|> lookAhead (oneOf punc))
 -- 5. When rerendering, a space must not appear between the end of a markup close and
 --    a punctuation/newline character.
 -- 6. But any other character must have a space before it.
-wordChunk :: Parser Words
-wordChunk = choice
+wordChunk :: Char -> Parser Words
+wordChunk end = choice
   [ try $ Bold        <$> between (single '*') (single '*') (someTill '*') <* pOrS
   , try $ Italic      <$> between (single '/') (single '/') (someTill '/') <* pOrS
   , try $ Highlight   <$> between (single '~') (single '~') (someTill '~') <* pOrS
@@ -140,10 +188,10 @@ wordChunk = choice
   , try image
   , link
   , try $ Punct       <$> oneOf punc
-  , Plain             <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= '\n') ]
+  , Plain             <$> takeWhile1P Nothing (\c -> c /= ' ' && c /= end) ]
   where
     pOrS :: Parser ()
-    pOrS = lookAhead $ void (oneOf $ '\n' : ' ' : punc) <|> eof
+    pOrS = lookAhead $ void (oneOf $ end : ' ' : punc) <|> eof
 
 punc :: String
 punc = ".,!?"
@@ -192,6 +240,7 @@ prettyOrg o = case o of
   Example t -> "#+begin_example\n" <> t <> "\n#+end_example"
   Paragraph ht -> par ht
   List items -> T.intercalate "\n" . map f $ NEL.toList items
+  Table rows -> T.intercalate "\n" . map row $ NEL.toList rows
   where
     f :: Item -> Text
     f (Item i ws) = T.replicate (i * 2) " " <> "- " <> par ws
@@ -204,6 +253,13 @@ prettyOrg o = case o of
     para b = case b of
       Punct _ -> prettyWords b
       _       -> " " <> prettyWords b
+
+    row :: Row -> Text
+    row Break    = "|-|"
+    row (Row cs) = "| " <> (T.intercalate " | " . map col $ NEL.toList cs) <> " |"
+
+    col :: Column -> Text
+    col (Column ws) = T.unwords . map prettyWords $ NEL.toList ws
 
 prettyWords :: Words -> Text
 prettyWords w = case w of
