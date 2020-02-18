@@ -89,6 +89,21 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Table - One Row"
       $ testPretty table "Table" "| A | B | C |"
       $ Table [Row [Column [Plain "A"], Column [Plain "B"], Column [Plain "C"]]]
+    , testCase "Table - One Row and Break"
+      $ testPretty table "Table" "| A | B | C |\n|---+---+---|"
+      $ Table [ Row [Column [Plain "A"], Column [Plain "B"], Column [Plain "C"]]
+              , Break ]
+    , testCase "Table - Row, Break, Row"
+      $ testPretty table "Table" "| A | B | C |\n|---+---+---|\n| D | E | F |"
+      $ Table [ Row [Column [Plain "A"], Column [Plain "B"], Column [Plain "C"]]
+              , Break
+              , Row [Column [Plain "D"], Column [Plain "E"], Column [Plain "F"]]]
+    , testCase "Table - Markup"
+      $ testPretty table "Table" "| *A* Yes | /B/ No |"
+      $ Table [Row [Column [Bold "A", Plain "Yes"], Column [Italic "B", Plain "No"]]]
+    , testCase "Table - Empty Column"
+      $ testPretty table "Table" "| A | | C |"
+      $ Table [Row [Column [Plain "A"], Empty, Column [Plain "C"]]]
     ]
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do

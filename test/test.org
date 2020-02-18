@@ -48,4 +48,15 @@ Things to do:
   - Watch video
 - Water the cat
 
+* Some Tables
+
+| A | B | C |
+|---+---+---|
+| D | E | F |
+
+| *A* Yes | /B/ No ~C~ |
+|---------+------------|
+
+* The End
+
 Farewell.

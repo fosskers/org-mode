@@ -53,7 +53,7 @@ data Item = Item Int (NonEmpty Words) deriving (Eq, Show)
 
 data Row = Break | Row (NonEmpty Column) deriving (Eq, Show)
 
-newtype Column = Column (NonEmpty Words) deriving (Eq, Show)
+data Column = Empty | Column (NonEmpty Words) deriving (Eq, Show)
 
 data Words
   = Bold Text
@@ -135,28 +135,13 @@ item = do
   l <- string "- " *> line '\n'
   pure $ Item (T.length leading `div` 2) l
 
-{-
-|   | Measurement Date |  kW/h |   Cost |
-|---+------------------+-------+--------|
-| # | 2019 Nov 19      |   132 |  12.47 |
-| # | 2019 Nov 22      | 48.65 |   4.60 |
-| # | 2019 Nov 30      | 91.84 |   8.68 |
-| # | 2019 Dec 15      |   256 |  24.19 |
-| # | 2019 Jan 9       |   380 |  35.91 |
-| # | 2019 Jan 10      | 15.28 |   1.44 |
-| # | 2019 Jan 31      |   285 |  26.93 |
-| # | 2019 Feb 6       | 98.85 |   9.34 |
-|---+------------------+-------+--------|
-| # | Total            |       | 123.56 |
-| ^ |                  |       |  total |
--}
 table :: Parser Org
 table = L.lexeme space $ Table <$> sepEndBy1 row (single '\n')
   where
     row :: Parser Row
     row = do
       void $ single '|'
-      brk <|> (Row <$> sepEndBy1 (space *> column) (single '|'))
+      brk <|> (Row <$> sepEndBy1 column (single '|'))
 
     -- | If the line starts with @|-@, assume its a break regardless of what
     -- chars come after that.
@@ -164,7 +149,9 @@ table = L.lexeme space $ Table <$> sepEndBy1 row (single '\n')
     brk = single '-' *> manyTillEnd $> Break
 
     column :: Parser Column
-    column = Column <$> line '|'
+    column = do
+      void $ someOf ' '
+      (lookAhead (single '|') $> Empty) <|> (Column <$> line '|')
 
 paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
@@ -232,6 +219,10 @@ someTill c = takeWhile1P (Just $ "some until " <> [c]) (/= c)
 someOf :: Char -> Parser Text
 someOf c = takeWhile1P (Just $ "some of " <> [c]) (== c)
 
+-- | Fast version of `many` specialized to `Text`.
+-- manyOf :: Char -> Parser Text
+-- manyOf c = takeWhileP (Just $ "many of " <> [c]) (== c)
+
 --------------------------------------------------------------------------------
 -- Pretty Printing
 
@@ -267,6 +258,7 @@ prettyOrg o = case o of
     row (Row cs) = "| " <> (T.intercalate " | " . map col $ NEL.toList cs) <> " |"
 
     col :: Column -> Text
+    col Empty       = ""
     col (Column ws) = T.unwords . map prettyWords $ NEL.toList ws
 
 prettyWords :: Words -> Text
