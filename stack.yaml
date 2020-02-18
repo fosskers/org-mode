@@ -1,3 +1,6 @@
 resolver: lts-15.0
 
 ghc-options: {"$locals": -ddump-to-file -ddump-hi}
+
+packages:
+  - org-mode
