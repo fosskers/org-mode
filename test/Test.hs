@@ -12,7 +12,6 @@ import           Data.Void (Void)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Text.Megaparsec
-import           Text.Pretty.Simple
 
 ---
 
@@ -20,9 +19,9 @@ main :: IO ()
 main = do
   simple <- T.readFile "test/simple.org"
   full   <- T.readFile "test/test.org"
-  let fl = parseMaybe orgFile full
-  pPrintNoColor fl
-  maybe (putStrLn "COULDN'T PARSE") T.putStrLn $ prettyOrgFile <$> fl
+  -- let fl = parseMaybe orgFile full
+  -- pPrintNoColor fl
+  -- maybe (putStrLn "COULDN'T PARSE") T.putStrLn $ prettyOrgFile <$> fl
   defaultMain $ suite simple full
 
 suite :: T.Text -> T.Text -> TestTree
