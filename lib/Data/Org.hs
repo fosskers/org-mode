@@ -2,7 +2,9 @@
 
 module Data.Org
   ( -- * Types
-    Org(..)
+    OrgFile(..)
+  , Meta(..)
+  , Org(..)
   , Words(..)
   , Item(..)
   , Row(..)
@@ -10,12 +12,15 @@ module Data.Org
   , URL(..)
   , Language(..)
     -- * Parser
-  , org
+  , orgFile
     -- ** Internal Parsers
     -- | These are exposed for testing purposes.
+  , meta
+  , org
   , table
   , line
     -- * Pretty Printing
+  , prettyOrgFile
   , prettyOrgs
   , prettyOrg
   , prettyWords
@@ -29,15 +34,30 @@ import qualified Data.List.NonEmpty as NEL
 import           Data.Semigroup (sconcat)
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Time.Calendar (Day, fromGregorian, toGregorian)
 import           Data.Void (Void)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
+import           Text.Printf (printf)
 
 --------------------------------------------------------------------------------
 -- Types
 
--- | An org-mode document tree.
+-- | A complete @.org@ file with metadata.
+data OrgFile = OrgFile
+  { orgMeta    :: Meta
+  , orgContent :: [Org] }
+  deriving (Eq, Show)
+
+data Meta = Meta
+  { metaTitle    :: Maybe Text
+  , metaDate     :: Maybe Day
+  , metaAuthor   :: Maybe Text
+  , metaHtmlHead :: Maybe Text }
+  deriving (Eq, Show)
+
+-- | Various sections of an org-mode file.
 data Org
   = Heading Int (NonEmpty Words)
   | Quote Text
@@ -79,8 +99,24 @@ newtype Language = Language Text deriving stock (Eq, Show)
 
 type Parser = Parsec Void Text
 
+orgFile :: Parser OrgFile
+orgFile = space *> L.lexeme space (OrgFile <$> meta <*> org) <* eof
+
+meta :: Parser Meta
+meta = L.lexeme space $ Meta
+  <$> optional (string "#+TITLE: "     *> someTillEnd <* space)
+  <*> optional (string "#+DATE: "      *> date        <* space)
+  <*> optional (string "#+AUTHOR: "    *> someTillEnd <* space)
+  <*> optional (string "#+HTML_HEAD: " *> someTillEnd <* space)
+  where
+    date :: Parser Day
+    date = fromGregorian
+      <$> (L.decimal <* char '-')
+      <*> (L.decimal <* char '-')
+      <*> L.decimal
+
 org :: Parser [Org]
-org = L.lexeme space $ many block <* eof
+org = L.lexeme space $ many block
   where
     block :: Parser Org
     block = choice
@@ -200,17 +236,11 @@ link = between (single '[') (single ']') $ Link
   <$> between (single '[') (single ']') (URL <$> someTill ']')
   <*> optional (between (single '[') (single ']') (someTill ']'))
 
--- meta :: Parser Org
--- meta = undefined
-
 someTillEnd :: Parser Text
 someTillEnd = someTill '\n'
 
 manyTillEnd :: Parser Text
 manyTillEnd = takeWhileP (Just "many until the end of the line") (/= '\n')
-
--- manyTill' :: Char -> Parser Text
--- manyTill' c = takeWhileP (Just $ "Many until " <> [c]) (/= c)
 
 someTill :: Char -> Parser Text
 someTill c = takeWhile1P (Just $ "some until " <> [c]) (/= c)
@@ -219,12 +249,21 @@ someTill c = takeWhile1P (Just $ "some until " <> [c]) (/= c)
 someOf :: Char -> Parser Text
 someOf c = takeWhile1P (Just $ "some of " <> [c]) (== c)
 
--- | Fast version of `many` specialized to `Text`.
--- manyOf :: Char -> Parser Text
--- manyOf c = takeWhileP (Just $ "many of " <> [c]) (== c)
-
 --------------------------------------------------------------------------------
 -- Pretty Printing
+
+prettyOrgFile :: OrgFile -> Text
+prettyOrgFile (OrgFile m os) = metas <> "\n\n" <> prettyOrgs os
+  where
+    metas = T.intercalate "\n" $
+      maybe [] (\t -> ["#+TITLE: " <> t]) (metaTitle m)
+      <> maybe [] (pure . T.pack . day) (metaDate m)
+      <> maybe [] (\a -> ["#+AUTHOR: " <> a]) (metaAuthor m)
+      <> maybe [] (\h -> ["#+HTML_HEAD: " <> h]) (metaHtmlHead m)
+
+    day :: Day -> String
+    day d = case toGregorian d of
+      (yr, mn, dy) -> printf "#+DATE: %d-%02d-%02d" yr mn dy
 
 prettyOrgs :: [Org] -> Text
 prettyOrgs = T.intercalate "\n\n" . map prettyOrg

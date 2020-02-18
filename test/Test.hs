@@ -3,11 +3,11 @@
 
 module Main where
 
-import           Data.Maybe (isJust)
 import           Data.Org
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import           Data.Time.Calendar (fromGregorian)
 import           Data.Void (Void)
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -20,9 +20,9 @@ main :: IO ()
 main = do
   simple <- T.readFile "test/simple.org"
   full   <- T.readFile "test/test.org"
-  let fl = parseMaybe org full
+  let fl = parseMaybe orgFile full
   pPrintNoColor fl
-  maybe (putStrLn "COULDN'T PARSE") T.putStrLn $ prettyOrgs <$> fl
+  maybe (putStrLn "COULDN'T PARSE") T.putStrLn $ prettyOrgFile <$> fl
   defaultMain $ suite simple full
 
 suite :: T.Text -> T.Text -> TestTree
@@ -106,6 +106,12 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Table - Empty Column"
       $ testPretty table "Table" "| A | | C |"
       $ Table [Row [Column [Plain "A"], Empty, Column [Plain "C"]]]
+    , testCase "Meta - Title"
+      $ testPretty meta "Meta" "#+TITLE: Test"
+      $ Meta (Just "Test") Nothing Nothing Nothing
+    , testCase "Meta - Full"
+      $ testPretty meta "Meta" "#+TITLE: Test\n#+DATE: 2020-02-17\n#+AUTHOR: Colin"
+      $ Meta (Just "Test") (Just $ fromGregorian 2020 2 17) (Just "Colin") Nothing
     ]
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do
@@ -113,13 +119,14 @@ suite simple full = testGroup "Unit Tests"
         (prettyOrgs <$> orig) @?= Just "A /B/. C?"
     ]
   , testGroup "Full Files"
-    [ testCase "Simple" $ do
-        let !orig = parseMaybe org simple
-        assertBool "Couldn't parse" $ isJust orig
-        (orig >>= parseMaybe org . prettyOrgs) @?= orig
-    , testCase "Full" $ case parse org "test.org" full of
+    [ testCase "Simple" $ case parse orgFile "simple.org" simple of
         Left eb -> assertFailure $ errorBundlePretty eb
-        Right r -> case parse org "test.org - reparse" (prettyOrgs r) of
+        Right r -> case parse orgFile "simple.org - reparse" (prettyOrgFile r) of
+          Left eb' -> assertFailure $ errorBundlePretty eb'
+          Right r' -> r' @?= r
+    , testCase "Full" $ case parse orgFile "test.org" full of
+        Left eb -> assertFailure $ errorBundlePretty eb
+        Right r -> case parse orgFile "test.org - reparse" (prettyOrgFile r) of
           Left eb' -> assertFailure $ errorBundlePretty eb'
           Right r' -> r' @?= r
     ]

@@ -1,3 +1,8 @@
+#+TITLE: The Test File
+#+DATE: 2020-02-17
+#+AUTHOR: Colin
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="../assets/org-theme.css"/>
+
 Some text before the initial heading.
 
 * A Heading
