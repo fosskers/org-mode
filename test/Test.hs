@@ -65,6 +65,8 @@ suite simple full = testGroup "Unit Tests"
       [Plain "A", Plain "B"]
     , testCase "Line - Newline" $ testPretty (line '\n') "Line" "A\n" [Plain "A"]
     , testCase "Line - Space at end" $ testPretty (line '\n') "Line" "A \n" [Plain "A"]
+    , testCase "Line - Dummy markup symbol" $ testPretty (line '\n') "Line" "A ~ B"
+      [Plain "A", Plain "~", Plain "B"]
     ]
   , testGroup "Composite Structures"
     [ testCase "Example" $ parseMaybe org "#+begin_example\nHi!\n\nHo\n#+end_example"
