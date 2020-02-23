@@ -1,0 +1,32 @@
+cabal-version:      2.2
+name:               org-mode-lucid
+version:            1.0.0
+description:        Lucid integration for org-mode.
+homepage:           https://github.com/fosskers/org-mode
+author:             Colin Woodbury
+maintainer:         colin@fosskers.ca
+copyright:          2020 Colin Woodbury
+license:            BSD-3-Clause
+license-file:       LICENSE
+build-type:         Simple
+extra-source-files:
+  README.md
+  CHANGELOG.md
+
+common commons
+  default-language:   Haskell2010
+  default-extensions: OverloadedStrings
+  ghc-options:
+    -Wall -Wpartial-fields -Wincomplete-record-updates
+    -Wincomplete-uni-patterns -Widentities
+
+  build-depends:
+    , base      >=4.12 && <5
+    , lucid     ^>=2.9
+    , org-mode  ^>=1.0
+    , text
+
+library
+  import:          commons
+  hs-source-dirs:  lib
+  exposed-modules: Data.Org.Lucid
