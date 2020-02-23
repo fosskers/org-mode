@@ -55,7 +55,7 @@ html o@(OrgFile m _) = html_ $ do
 body :: OrgFile -> Html ()
 body o@(OrgFile m os) = do
   maybe (pure ()) (h1_ . toHtml) $ metaTitle m
-  toc o
+  -- toc o
   traverse_ orgHTML os
 
 toc :: OrgFile -> Html ()
