@@ -71,7 +71,7 @@ orgHTML o = case o of
     $ toHtml t
   List is -> listHTML is
   Table rw -> tableHTML rw
-  Paragraph ws -> paragraphHTML ws
+  Paragraph ws -> p_ $ paragraphHTML ws
 
 paragraphHTML :: NonEmpty Words -> Html ()
 paragraphHTML (h :| t) = wordsHTML h <> foldMap para t
