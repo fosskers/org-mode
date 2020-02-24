@@ -87,11 +87,17 @@ suite simple full = testGroup "Unit Tests"
     , testCase "List" $ parseMaybe org "- A\n  - B\n- C"
       @?= Just [List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]]
     , testCase "List - Things after" $ parseMaybe org "- A\n  - B\n- C\n\nD"
-      @?= Just [ List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]
+      @?= Just [List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]
                , Paragraph [Plain "D"]]
+
+    , testCase "List - Multiline"
+      $ testPretty list "List" "- A\n  B\n- C"
+      $ List [Item 0 [Plain "A", Plain "B"], Item 0 [Plain "C"]]
+
     , testCase "Table - One Row"
       $ testPretty table "Table" "| A | B | C |"
       $ Table [Row [Column [Plain "A"], Column [Plain "B"], Column [Plain "C"]]]
+
     , testCase "Table - One Row and Break"
       $ testPretty table "Table" "| A | B | C |\n|---+---+---|"
       $ Table [ Row [Column [Plain "A"], Column [Plain "B"], Column [Plain "C"]]

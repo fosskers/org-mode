@@ -18,6 +18,7 @@ module Data.Org
   , meta
   , org
   , table
+  , list
   , line
     -- * Pretty Printing
   , prettyOrgFile
@@ -165,11 +166,24 @@ code = L.lexeme space $ do
 list :: Parser Org
 list = L.lexeme space $ List <$> sepEndBy1 item newline
 
+-- | Conditions for ending the current bullet:
+--
+-- 1. You find two '\n' at the end of a line.
+-- 2. The first two non-space characters of the next line are "- ".
 item :: Parser Item
 item = do
   leading <- takeWhileP (Just "space") (== ' ')
-  l <- string "- " *> line '\n'
+  void $ string "- "
+  l <- bullet
   pure $ Item (T.length leading `div` 2) l
+  where
+    bullet :: Parser (NonEmpty Words)
+    bullet = do
+      l <- line '\n'
+      try (lookAhead keepGoing *> space *> ((l <>) <$> bullet)) <|> pure l
+
+    keepGoing :: Parser ()
+    keepGoing = void $ char '\n' *> manyOf ' ' *> noneOf ['-', '\n']
 
 table :: Parser Org
 table = L.lexeme space $ Table <$> sepEndBy1 row (single '\n')
@@ -248,6 +262,9 @@ someTill c = takeWhile1P (Just $ "some until " <> [c]) (/= c)
 -- | Fast version of `some` specialized to `Text`.
 someOf :: Char -> Parser Text
 someOf c = takeWhile1P (Just $ "some of " <> [c]) (== c)
+
+manyOf :: Char -> Parser Text
+manyOf c = takeWhileP (Just $ "many of " <> [c]) (== c)
 
 --------------------------------------------------------------------------------
 -- Pretty Printing
