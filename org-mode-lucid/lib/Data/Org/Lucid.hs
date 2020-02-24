@@ -56,7 +56,7 @@ body :: OrgFile -> Html ()
 body o@(OrgFile m os) = do
   maybe (pure ()) (h1_ . toHtml) $ metaTitle m
   -- toc o
-  fold . intersperse (br_ []) $ map orgHTML os
+  traverse_ orgHTML os
 
 toc :: OrgFile -> Html ()
 toc = undefined
