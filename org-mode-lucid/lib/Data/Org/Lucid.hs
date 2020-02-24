@@ -138,12 +138,11 @@ tableHTML rs = table_ $ do
 
 heading :: Int -> (Html () -> Html ())
 heading n = case n of
-  1 -> h1_
-  2 -> h2_
-  3 -> h3_
-  4 -> h4_
-  5 -> h5_
-  6 -> h6_
+  1 -> h2_
+  2 -> h3_
+  3 -> h4_
+  4 -> h5_
+  5 -> h6_
   _ -> id
 
 wordsHTML :: Words -> Html ()
