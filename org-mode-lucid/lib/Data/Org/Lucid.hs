@@ -54,7 +54,7 @@ html o@(OrgFile m _) = html_ $ do
 -- Does not wrap contents in a @<body>@ tag.
 body :: OrgFile -> Html ()
 body o@(OrgFile m os) = do
-  maybe (pure ()) (h1_ . toHtml) $ metaTitle m
+  maybe (pure ()) (h1_ [class_ "title"] . toHtml) $ metaTitle m
   -- toc o
   traverse_ orgHTML os
 
