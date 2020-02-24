@@ -221,7 +221,7 @@ wordChunk end = choice
     pOrS = lookAhead $ void (oneOf $ end : ' ' : punc) <|> eof
 
 punc :: String
-punc = ".,!?"
+punc = ".,!?):;'"
 
 image :: Parser Words
 image = between (single '[') (single ']') $

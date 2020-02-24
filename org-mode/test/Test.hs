@@ -57,8 +57,10 @@ suite simple full = testGroup "Unit Tests"
       @?= Just [Paragraph [Plain "This", Plain "is", Plain "*not*bold."]]
     , testCase "After" $ parseMaybe org "Neither is *this*here."
       @?= Just [Paragraph [Plain "Neither", Plain "is", Plain "*this*here."]]
-    , testCase "Punctuation" $ parseMaybe org "*This*, is bold."
+    , testCase "Punctuation - Comma" $ parseMaybe org "*This*, is bold."
       @?= Just [Paragraph [Bold "This", Punct ',', Plain "is", Plain "bold."]]
+    , testCase "Punctuation - Paren" $ parseMaybe org "(the ~be~)"
+      @?= Just [Paragraph [Plain "(the", Highlight "be", Punct ')']]
     , testCase "Line - Plain" $ testPretty (line '\n') "Line" "A" [Plain "A"]
     , testCase "Line - Wide Gap" $ testPretty (line '\n') "Line" "A   B"
       [Plain "A", Plain "B"]
