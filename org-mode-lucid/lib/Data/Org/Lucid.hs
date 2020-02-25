@@ -78,8 +78,9 @@ paragraphHTML (h :| t) = wordsHTML h <> foldMap para t
   where
     para :: Words -> Html ()
     para b = case b of
-      Punct _ -> wordsHTML b
-      _       -> " " <> wordsHTML b
+      Punct '(' -> " " <> wordsHTML b
+      Punct _   -> wordsHTML b
+      _         -> " " <> wordsHTML b
 
 -- | Render a grouping of `Words` that you expect to appear on a single line.
 lineHTML :: NonEmpty Words -> Html ()

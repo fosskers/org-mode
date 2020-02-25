@@ -17,6 +17,7 @@ module Data.Org
     -- | These are exposed for testing purposes.
   , meta
   , org
+  , paragraph
   , table
   , list
   , line
@@ -207,7 +208,7 @@ paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
 
 line :: Char -> Parser (NonEmpty Words)
-line end = sepEndBy1 (wordChunk end) (void (someOf ' ') <|> void (lookAhead $ oneOf punc))
+line end = sepEndBy1 (wordChunk end) (manyOf ' ')
 
 -- | RULES
 --
@@ -220,22 +221,22 @@ line end = sepEndBy1 (wordChunk end) (void (someOf ' ') <|> void (lookAhead $ on
 -- 6. But any other character must have a space before it.
 wordChunk :: Char -> Parser Words
 wordChunk end = choice
-  [ try $ Bold        <$> between (single '*') (single '*') (someTill '*') <* pOrS
-  , try $ Italic      <$> between (single '/') (single '/') (someTill '/') <* pOrS
-  , try $ Highlight   <$> between (single '~') (single '~') (someTill '~') <* pOrS
-  , try $ Verbatim    <$> between (single '=') (single '=') (someTill '=') <* pOrS
-  , try $ Underline   <$> between (single '_') (single '_') (someTill '_') <* pOrS
-  , try $ Strike      <$> between (single '+') (single '+') (someTill '+') <* pOrS
+  [ try $ Bold      <$> between (single '*') (single '*') (someTill '*') <* pOrS
+  , try $ Italic    <$> between (single '/') (single '/') (someTill '/') <* pOrS
+  , try $ Highlight <$> between (single '~') (single '~') (someTill '~') <* pOrS
+  , try $ Verbatim  <$> between (single '=') (single '=') (someTill '=') <* pOrS
+  , try $ Underline <$> between (single '_') (single '_') (someTill '_') <* pOrS
+  , try $ Strike    <$> between (single '+') (single '+') (someTill '+') <* pOrS
   , try image
   , link
-  , try $ Punct       <$> oneOf punc
-  , Plain             <$> takeWhile1P (Just "plain text") (\c -> c /= ' ' && c /= end) ]
+  , try $ Punct     <$> oneOf punc
+  , Plain           <$> takeWhile1P (Just "plain text") (\c -> c /= ' ' && c /= end) ]
   where
     pOrS :: Parser ()
     pOrS = lookAhead $ void (oneOf $ end : ' ' : punc) <|> eof
 
 punc :: String
-punc = ".,!?):;'"
+punc = ".,!?():;'"
 
 image :: Parser Words
 image = between (single '[') (single ']') $
@@ -306,8 +307,9 @@ prettyOrg o = case o of
     -- | Stick punctuation directly behind the chars in front of it.
     para :: Words -> Text
     para b = case b of
-      Punct _ -> prettyWords b
-      _       -> " " <> prettyWords b
+      Punct '(' -> " " <> prettyWords b
+      Punct _   -> prettyWords b
+      _         -> " " <> prettyWords b
 
     row :: Row -> Text
     row Break    = "|-|"
