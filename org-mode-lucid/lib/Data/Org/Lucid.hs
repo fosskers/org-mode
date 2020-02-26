@@ -74,13 +74,16 @@ orgHTML o = case o of
   Paragraph ws -> p_ $ paragraphHTML ws
 
 paragraphHTML :: NonEmpty Words -> Html ()
-paragraphHTML (h :| t) = wordsHTML h <> foldMap para t
+paragraphHTML (h :| t) = wordsHTML h <> para h t
   where
-    para :: Words -> Html ()
-    para b = case b of
-      Punct '(' -> " " <> wordsHTML b
-      Punct _   -> wordsHTML b
-      _         -> " " <> wordsHTML b
+    para :: Words -> [Words] -> Html ()
+    para _ [] = ""
+    para pr (w:ws) = case pr of
+      Punct '(' -> wordsHTML w <> para w ws
+      _ -> case w of
+        Punct '(' -> " " <> wordsHTML w <> para w ws
+        Punct _   -> wordsHTML w <> para w ws
+        _         -> " " <> wordsHTML w <> para w ws
 
 -- | Render a grouping of `Words` that you expect to appear on a single line.
 lineHTML :: NonEmpty Words -> Html ()

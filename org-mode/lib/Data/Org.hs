@@ -302,14 +302,18 @@ prettyOrg o = case o of
     f (Item i ws) = T.replicate (i * 2) " " <> "- " <> par ws
 
     par :: NonEmpty Words -> Text
-    par (h :| t) = prettyWords h <> foldMap para t
+    par (h :| t) = prettyWords h <> para h t
 
-    -- | Stick punctuation directly behind the chars in front of it.
-    para :: Words -> Text
-    para b = case b of
-      Punct '(' -> " " <> prettyWords b
-      Punct _   -> prettyWords b
-      _         -> " " <> prettyWords b
+    -- | Stick punctuation directly behind the chars in front of it, while
+    -- paying special attention to parentheses.
+    para :: Words -> [Words] -> Text
+    para _ []      = ""
+    para pr (w:ws) = case pr of
+      Punct '(' -> prettyWords w <> para w ws
+      _ -> case w of
+        Punct '(' -> " " <> prettyWords w <> para w ws
+        Punct _   -> prettyWords w <> para w ws
+        _         -> " " <> prettyWords w <> para w ws
 
     row :: Row -> Text
     row Break    = "|-|"
