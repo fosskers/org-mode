@@ -67,7 +67,7 @@ orgHTML o = case o of
   Quote t -> blockquote_ . p_ $ toHtml t
   Example t -> pre_ [class_ "example"] $ toHtml t
   Code l t -> div_ [class_ "org-src-container"]
-    $ pre_ [classes_ $ "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
+    $ pre_ [classes_ $ "prettyprint" : "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
     $ toHtml t
   List is -> listHTML is
   Table rw -> tableHTML rw
