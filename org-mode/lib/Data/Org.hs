@@ -6,6 +6,7 @@ module Data.Org
   , Meta(..)
   , Org(..)
   , Words(..)
+  , ListItems(..)
   , Item(..)
   , Row(..)
   , Column(..)
@@ -65,13 +66,16 @@ data Org
   | Quote Text
   | Example Text
   | Code (Maybe Language) Text
-  | List (NonEmpty Item)
+  | List ListItems
   | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show)
 
+newtype ListItems = ListItems (NonEmpty Item)
+  deriving stock (Eq, Show)
+
 -- | A line in a bullet-list.
-data Item = Item Int (NonEmpty Words) deriving (Eq, Show)
+data Item = Item (NonEmpty Words) (Maybe ListItems) deriving (Eq, Show)
 
 data Row = Break | Row (NonEmpty Column) deriving (Eq, Show)
 
@@ -165,7 +169,11 @@ code = L.lexeme space $ do
     lng = single ' '  *> someTillEnd
 
 list :: Parser Org
-list = L.lexeme space $ List <$> sepEndBy1 item newline
+list = List <$> listItems
+
+listItems :: Parser ListItems
+listItems = undefined
+-- list = L.lexeme space $ List <$> sepEndBy1 item newline
 
 -- | Conditions for ending the current bullet:
 --
@@ -176,7 +184,8 @@ item = do
   leading <- takeWhileP (Just "space") (== ' ')
   void $ string "- "
   l <- bullet
-  pure $ Item (T.length leading `div` 2) l
+  -- pure $ Item (T.length leading `div` 2) l
+  undefined
   where
     bullet :: Parser (NonEmpty Words)
     bullet = do
@@ -295,11 +304,15 @@ prettyOrg o = case o of
   Quote t -> "#+begin_quote\n" <> t <> "\n#+end_quote"
   Example t -> "#+begin_example\n" <> t <> "\n#+end_example"
   Paragraph ht -> par ht
-  List items -> T.intercalate "\n" . map f $ NEL.toList items
+  -- List items -> T.intercalate "\n" . map f $ NEL.toList items
+  List items -> lis items
   Table rows -> T.intercalate "\n" . map row $ NEL.toList rows
   where
-    f :: Item -> Text
-    f (Item i ws) = T.replicate (i * 2) " " <> "- " <> par ws
+    lis :: ListItems -> Text
+    lis = undefined
+
+    -- f :: Item -> Text
+    -- f (Item i ws) = T.replicate (i * 2) " " <> "- " <> par ws
 
     par :: NonEmpty Words -> Text
     par (h :| t) = prettyWords h <> para h t

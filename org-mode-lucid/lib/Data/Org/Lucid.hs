@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -67,9 +66,9 @@ orgHTML o = case o of
   Quote t -> blockquote_ . p_ $ toHtml t
   Example t -> pre_ [class_ "example"] $ toHtml t
   Code l t -> div_ [class_ "org-src-container"]
-    $ pre_ [classes_ $ "prettyprint" : "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
+    $ pre_ [classes_ $ "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
     $ toHtml t
-  List is -> listHTML is
+  List is -> listItemsHTML is
   Table rw -> tableHTML rw
   Paragraph ws -> p_ $ paragraphHTML ws
 
@@ -89,34 +88,37 @@ paragraphHTML (h :| t) = wordsHTML h <> para h t
 lineHTML :: NonEmpty Words -> Html ()
 lineHTML = fold . intersperse " " . map wordsHTML . NEL.toList
 
-listHTML :: NonEmpty Item -> Html ()
-listHTML = void . work . sameIndent
-  where
-    work :: [NonEmpty Item] -> Html [NonEmpty Item]
-    work [] = pure []
-    work is = ul_ [class_ "org-ul"] $ loop is
+listItemsHTML :: ListItems -> Html ()
+listItemsHTML (ListItems is) = undefined
 
-    loop :: [NonEmpty Item] -> Html [NonEmpty Item]
-    loop [] = pure []
-    loop [is] = traverse_ f is $> []
-    loop (is:r@(a:_)) = do
-      let !curr = ind $ NEL.head is
-      traverse_ f is
-      if ind (NEL.head a) < curr
-        then pure r
-        else li_ (work r) >>= \case
-          [] -> pure []
-          next@(b:_) | ind (NEL.head b) == curr -> loop next
-                     | otherwise -> pure next
+-- listHTML :: NonEmpty Item -> Html ()
+-- listHTML = void . work . sameIndent
+--   where
+--     work :: [NonEmpty Item] -> Html [NonEmpty Item]
+--     work [] = pure []
+--     work is = ul_ [class_ "org-ul"] $ loop is
 
-    f :: Item -> Html ()
-    f (Item _ ws) = li_ $ lineHTML ws
+--     loop :: [NonEmpty Item] -> Html [NonEmpty Item]
+--     loop [] = pure []
+--     loop [is] = traverse_ f is $> []
+--     loop (is:r@(a:_)) = do
+--       let !curr = ind $ NEL.head is
+--       traverse_ f is
+--       if ind (NEL.head a) < curr
+--         then pure r
+--         else li_ (work r) >>= \case
+--           [] -> pure []
+--           next@(b:_) | ind (NEL.head b) == curr -> loop next
+--                      | otherwise -> pure next
 
-    ind :: Item -> Int
-    ind (Item n _) = n
+--     f :: Item -> Html ()
+--     f (Item _ ws) = li_ $ lineHTML ws
 
-    sameIndent :: NonEmpty Item -> [NonEmpty Item]
-    sameIndent = NEL.groupWith ind
+--     ind :: Item -> Int
+--     ind (Item n _) = n
+
+--     sameIndent :: NonEmpty Item -> [NonEmpty Item]
+--     sameIndent = NEL.groupWith ind
 
 tableHTML :: NonEmpty Row -> Html ()
 tableHTML rs = table_ $ do

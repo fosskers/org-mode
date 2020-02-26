@@ -90,15 +90,21 @@ suite simple full = testGroup "Unit Tests"
       @?= Just [Code (Just $ Language "haskell") ""]
     , testCase "Code - No Language" $ parseMaybe org "#+begin_src\n1 + 1\n#+end_src"
       @?= Just [Code Nothing "1 + 1"]
+
     , testCase "List" $ parseMaybe org "- A\n  - B\n- C"
-      @?= Just [List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]]
+      @?= Just [List (ListItems
+                      [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])
+                      , Item [Plain "C"] Nothing ])]
+
     , testCase "List - Things after" $ parseMaybe org "- A\n  - B\n- C\n\nD"
-      @?= Just [List [Item 0 [Plain "A"], Item 1 [Plain "B"], Item 0 [Plain "C"]]
+      @?= Just [ List (ListItems
+                       [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])
+                       , Item [Plain "C"] Nothing])
                , Paragraph [Plain "D"]]
 
     , testCase "List - Multiline"
       $ testPretty list "List" "- A\n  B\n- C"
-      $ List [Item 0 [Plain "A", Plain "B"], Item 0 [Plain "C"]]
+      $ List (ListItems [Item [Plain "A", Plain "B"] Nothing, Item [Plain "C"] Nothing])
 
     , testCase "Table - One Row"
       $ testPretty table "Table" "| A | B | C |"
