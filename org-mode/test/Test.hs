@@ -12,6 +12,7 @@ import           Data.Void (Void)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Text.Megaparsec
+import           Text.Megaparsec.Char
 
 ---
 
@@ -91,10 +92,21 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Code - No Language" $ parseMaybe org "#+begin_src\n1 + 1\n#+end_src"
       @?= Just [Code Nothing "1 + 1"]
 
-    , testCase "List" $ parseMaybe org "- A\n  - B\n- C"
-      @?= Just [List (ListItems
-                      [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])
-                      , Item [Plain "C"] Nothing ])]
+     , testCase "List - Single Indent"
+      $ testPretty list "List" "- A\n  - B"
+      $ List (ListItems [Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])])
+
+    , testCase "List - Indent and Back"
+      $ testPretty list "List" "- A\n  - B\n- C"
+      $ List (ListItems
+               [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])
+               , Item [Plain "C"] Nothing ])
+
+    , testCase "List - Double Indent and Back"
+      $ testPretty list "List" "- A\n  - B\n  - C\n- D"
+      $ List (ListItems
+               [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing, Item [Plain "C"] Nothing])
+               , Item [Plain "D"] Nothing ])
 
     , testCase "List - Things after" $ parseMaybe org "- A\n  - B\n- C\n\nD"
       @?= Just [ List (ListItems
@@ -149,9 +161,17 @@ suite simple full = testGroup "Unit Tests"
           Left eb' -> assertFailure $ errorBundlePretty eb'
           Right r' -> r' @?= r
     ]
+  , testGroup "Megaparsec Sanity"
+    [ testCase "sepEndBy1" $ testPretty sepTest "sepBy1" "A.A.A.B" ['A', 'A', 'A']
+    ]
   ]
 
 testPretty :: (Eq a, Show a) => Parsec Void Text a -> String -> Text -> a -> Assertion
 testPretty parser labl src expt = case parse parser labl src of
   Left eb -> assertFailure $ errorBundlePretty eb
   Right r -> r @?= expt
+
+-- | Conclusion: If the separator appears but the next parse attempt fails, the
+-- /whole/ thing fails.
+sepTest :: Parsec Void Text [Char]
+sepTest = char 'A' `sepEndBy1` char '.'

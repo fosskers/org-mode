@@ -9,9 +9,7 @@ module Data.Org.Lucid
   , body
   ) where
 
-import           Control.Monad (void)
 import           Data.Foldable (fold, traverse_)
-import           Data.Functor (($>))
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
@@ -89,36 +87,10 @@ lineHTML :: NonEmpty Words -> Html ()
 lineHTML = fold . intersperse " " . map wordsHTML . NEL.toList
 
 listItemsHTML :: ListItems -> Html ()
-listItemsHTML (ListItems is) = undefined
-
--- listHTML :: NonEmpty Item -> Html ()
--- listHTML = void . work . sameIndent
---   where
---     work :: [NonEmpty Item] -> Html [NonEmpty Item]
---     work [] = pure []
---     work is = ul_ [class_ "org-ul"] $ loop is
-
---     loop :: [NonEmpty Item] -> Html [NonEmpty Item]
---     loop [] = pure []
---     loop [is] = traverse_ f is $> []
---     loop (is:r@(a:_)) = do
---       let !curr = ind $ NEL.head is
---       traverse_ f is
---       if ind (NEL.head a) < curr
---         then pure r
---         else li_ (work r) >>= \case
---           [] -> pure []
---           next@(b:_) | ind (NEL.head b) == curr -> loop next
---                      | otherwise -> pure next
-
---     f :: Item -> Html ()
---     f (Item _ ws) = li_ $ lineHTML ws
-
---     ind :: Item -> Int
---     ind (Item n _) = n
-
---     sameIndent :: NonEmpty Item -> [NonEmpty Item]
---     sameIndent = NEL.groupWith ind
+listItemsHTML (ListItems is) = ul_ [class_ "org-ul"] $ traverse_ f is
+  where
+    f :: Item -> Html ()
+    f (Item ws next) = li_ $ lineHTML ws >> maybe (pure ()) listItemsHTML next
 
 tableHTML :: NonEmpty Row -> Html ()
 tableHTML rs = table_ $ do

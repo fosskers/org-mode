@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE DerivingStrategies #-}
 
 module Data.Org
@@ -169,23 +170,28 @@ code = L.lexeme space $ do
     lng = single ' '  *> someTillEnd
 
 list :: Parser Org
-list = List <$> listItems
+list = L.lexeme space $ List <$> listItems 0
 
-listItems :: Parser ListItems
-listItems = undefined
--- list = L.lexeme space $ List <$> sepEndBy1 item newline
+listItems :: Int -> Parser ListItems
+listItems indent = ListItems
+  <$> sepBy1 (item indent) (try $ newline *> lookAhead (nextItem indent))
+
+nextItem :: Int -> Parser ()
+nextItem indent = do
+  void . string $ T.replicate indent " "
+  void $ string "- "
 
 -- | Conditions for ending the current bullet:
 --
 -- 1. You find two '\n' at the end of a line.
 -- 2. The first two non-space characters of the next line are "- ".
-item :: Parser Item
-item = do
-  leading <- takeWhileP (Just "space") (== ' ')
+item :: Int -> Parser Item
+item indent = do
+  leading <- string $ T.replicate indent " "
   void $ string "- "
   l <- bullet
-  -- pure $ Item (T.length leading `div` 2) l
-  undefined
+  let !nextInd = T.length leading + 2
+  Item l <$> (optional (try $ newline *> listItems nextInd))  -- TODO `try`?
   where
     bullet :: Parser (NonEmpty Words)
     bullet = do
@@ -304,15 +310,16 @@ prettyOrg o = case o of
   Quote t -> "#+begin_quote\n" <> t <> "\n#+end_quote"
   Example t -> "#+begin_example\n" <> t <> "\n#+end_example"
   Paragraph ht -> par ht
-  -- List items -> T.intercalate "\n" . map f $ NEL.toList items
-  List items -> lis items
+  List items -> lis 0 items
   Table rows -> T.intercalate "\n" . map row $ NEL.toList rows
   where
-    lis :: ListItems -> Text
-    lis = undefined
+    lis :: Int -> ListItems -> Text
+    lis indent (ListItems is) = T.intercalate "\n" . map (f indent) $ NEL.toList is
 
-    -- f :: Item -> Text
-    -- f (Item i ws) = T.replicate (i * 2) " " <> "- " <> par ws
+    f :: Int -> Item -> Text
+    f indent (Item ws li) =
+      T.replicate indent " " <> "- " <> par ws
+      <> maybe "" (\is -> "\n" <> lis (indent + 2) is) li
 
     par :: NonEmpty Words -> Text
     par (h :| t) = prettyWords h <> para h t

@@ -50,6 +50,7 @@ Things to do:
 - [[https://www.youtube.com/][Watch cat videos]]
   - Go to site
   - Click on video
+    - Make sure to click really hard
   - Watch video
 - Water the cat
 
