@@ -30,8 +30,9 @@ module Data.Org
   , prettyWords
   ) where
 
-import           Control.Applicative.Combinators.NonEmpty hiding (someTill)
+import           Control.Applicative.Combinators.NonEmpty
 import           Control.Monad (void)
+import           Data.Bifunctor (first)
 import           Data.Functor (($>))
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
@@ -137,8 +138,8 @@ org = L.lexeme space $ many block
 
 heading :: Parser Org
 heading = L.lexeme space $ do
-  stars <- some $ single '*'
-  void $ single ' '
+  stars <- some $ char '*'
+  void $ char ' '
   Heading (NEL.length stars) <$> line '\n'
 
 quote :: Parser Org
@@ -167,7 +168,7 @@ code = L.lexeme space $ do
   where
     top = string "#+" *> (string "BEGIN_SRC" <|> string "begin_src")
     bot = string "#+" *> (string "END_SRC" <|> string "end_src")
-    lng = single ' '  *> someTillEnd
+    lng = char ' '  *> someTillEnd
 
 list :: Parser Org
 list = L.lexeme space $ List <$> listItems 0
@@ -191,7 +192,7 @@ item indent = do
   void $ string "- "
   l <- bullet
   let !nextInd = T.length leading + 2
-  Item l <$> (optional (try $ newline *> listItems nextInd))  -- TODO `try`?
+  Item l <$> (optional (try $ newline *> listItems nextInd))
   where
     bullet :: Parser (NonEmpty Words)
     bullet = do
@@ -202,22 +203,22 @@ item indent = do
     keepGoing = void $ char '\n' *> manyOf ' ' *> noneOf ['-', '\n']
 
 table :: Parser Org
-table = L.lexeme space $ Table <$> sepEndBy1 row (single '\n')
+table = L.lexeme space $ Table <$> sepEndBy1 row (char '\n')
   where
     row :: Parser Row
     row = do
-      void $ single '|'
-      brk <|> (Row <$> sepEndBy1 column (single '|'))
+      void $ char '|'
+      brk <|> (Row <$> sepEndBy1 column (char '|'))
 
     -- | If the line starts with @|-@, assume its a break regardless of what
     -- chars come after that.
     brk :: Parser Row
-    brk = single '-' *> manyTillEnd $> Break
+    brk = char '-' *> manyTillEnd $> Break
 
     column :: Parser Column
     column = do
       void $ someOf ' '
-      (lookAhead (single '|') $> Empty) <|> (Column <$> line '|')
+      (lookAhead (char '|') $> Empty) <|> (Column <$> line '|')
 
 paragraph :: Parser Org
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
@@ -236,14 +237,14 @@ line end = sepEndBy1 (wordChunk end) (manyOf ' ')
 -- 6. But any other character must have a space before it.
 wordChunk :: Char -> Parser Words
 wordChunk end = choice
-  [ try $ Bold      <$> between (single '*') (single '*') (someTill '*') <* pOrS
-  , try $ Italic    <$> between (single '/') (single '/') (someTill '/') <* pOrS
-  , try $ Highlight <$> between (single '~') (single '~') (someTill '~') <* pOrS
-  , try $ Verbatim  <$> between (single '=') (single '=') (someTill '=') <* pOrS
-  , try $ Underline <$> between (single '_') (single '_') (someTill '_') <* pOrS
-  , try $ Strike    <$> between (single '+') (single '+') (someTill '+') <* pOrS
+  [ try $ Bold      <$> between (char '*') (char '*') (someTill' '*') <* pOrS
+  , try $ Italic    <$> between (char '/') (char '/') (someTill' '/') <* pOrS
+  , try $ Highlight <$> between (char '~') (char '~') (someTill' '~') <* pOrS
+  , try $ Verbatim  <$> between (char '=') (char '=') (someTill' '=') <* pOrS
+  , try $ Underline <$> between (char '_') (char '_') (someTill' '_') <* pOrS
+  , try $ Strike    <$> between (char '+') (char '+') (someTill' '+') <* pOrS
   , try image
-  , link
+  , try link
   , try $ Punct     <$> oneOf punc
   , Plain           <$> takeWhile1P (Just "plain text") (\c -> c /= ' ' && c /= end) ]
   where
@@ -254,26 +255,25 @@ punc :: String
 punc = ".,!?():;'"
 
 image :: Parser Words
-image = between (single '[') (single ']') $
-  between (single '[') (single ']') $ do
-    path <- someTill '.'
-    void $ single '.'
-    ext <- string "jpg" <|> string "jpeg" <|> string "png"
-    pure . Image . URL $ path <> "." <> ext
+image = between (char '[') (char ']') $
+  between (char '[') (char ']') $ do
+    (path, ext) <- first T.pack
+      <$> someTill_ anySingle (string ".jpg" <|> string ".jpeg" <|> string ".png")
+    pure . Image . URL $ path <> ext
 
 link :: Parser Words
-link = between (single '[') (single ']') $ Link
-  <$> between (single '[') (single ']') (URL <$> someTill ']')
-  <*> optional (between (single '[') (single ']') (someTill ']'))
+link = between (char '[') (char ']') $ Link
+  <$> between (char '[') (char ']') (URL <$> someTill' ']')
+  <*> optional (between (char '[') (char ']') (someTill' ']'))
 
 someTillEnd :: Parser Text
-someTillEnd = someTill '\n'
+someTillEnd = someTill' '\n'
 
 manyTillEnd :: Parser Text
 manyTillEnd = takeWhileP (Just "many until the end of the line") (/= '\n')
 
-someTill :: Char -> Parser Text
-someTill c = takeWhile1P (Just $ "some until " <> [c]) (/= c)
+someTill' :: Char -> Parser Text
+someTill' c = takeWhile1P (Just $ "some until " <> [c]) (/= c)
 
 -- | Fast version of `some` specialized to `Text`.
 someOf :: Char -> Parser Text
