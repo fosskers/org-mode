@@ -48,8 +48,13 @@ suite simple full = testGroup "Unit Tests"
       @?= Just [Paragraph [Link (URL "https://www.fosskers.ca") (Just "Site")]]
     , testCase "Link (no desc)" $ parseMaybe org "[[https://www.fosskers.ca]]"
       @?= Just [Paragraph [Link (URL "https://www.fosskers.ca") Nothing]]
+
     , testCase "Image" $ parseMaybe org "[[/path/to/img.jpeg]]"
       @?= Just [Paragraph [Image (URL "/path/to/img.jpeg")]]
+    , testCase "Image - False Positive"
+      $ testPretty paragraph "Image" "[[http://a.ca][hi]] [[a.png]]"
+      $ Paragraph [Link (URL "http://a.ca") (Just "hi"), Image (URL "a.png")]
+
     , testCase "Plain" $ parseMaybe org "This is a line"
       @?= Just [Paragraph [Plain "This", Plain "is", Plain "a", Plain "line"]]
     ]

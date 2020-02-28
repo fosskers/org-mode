@@ -31,8 +31,7 @@ module Data.Org
   ) where
 
 import           Control.Applicative.Combinators.NonEmpty
-import           Control.Monad (void)
-import           Data.Bifunctor (first)
+import           Control.Monad (void, when)
 import           Data.Functor (($>))
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
@@ -41,6 +40,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Calendar (Day, fromGregorian, toGregorian)
 import           Data.Void (Void)
+import           System.FilePath (takeExtension)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -257,9 +257,10 @@ punc = ".,!?():;'"
 image :: Parser Words
 image = between (char '[') (char ']') $
   between (char '[') (char ']') $ do
-    (path, ext) <- first T.pack
-      <$> someTill_ anySingle (string ".jpg" <|> string ".jpeg" <|> string ".png")
-    pure . Image . URL $ path <> ext
+    path <- someTill' ']'
+    let !ext = takeExtension $ T.unpack path
+    when (ext `notElem` [".jpg", ".jpeg", ".png"]) $ failure Nothing mempty
+    pure . Image $ URL path
 
 link :: Parser Words
 link = between (char '[') (char ']') $ Link
