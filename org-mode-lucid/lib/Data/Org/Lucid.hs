@@ -33,12 +33,15 @@ data OrgStyle = OrgStyle
     -- depth is configurable.
   , numberedHeadings :: Bool
     -- ^ Whether to number each heading.
+  , bootstrap        :: Bool
+    -- ^ Whether to add bootstrap classes to certain elements.
   }
 
--- | Include the title and TOC, and number all headings. This mirrors the
--- behaviour of Emacs' native HTML export functionality.
+-- | Include the title and TOC, number all headings, and don't include Twitter
+-- Bootstrap classes. This mirrors the behaviour of Emacs' native HTML export
+-- functionality.
 defaultStyle :: OrgStyle
-defaultStyle = OrgStyle True (Just 3) True
+defaultStyle = OrgStyle True (Just 3) True False
 
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
 html :: OrgFile -> Html ()
@@ -108,7 +111,8 @@ tableHTML rs = table_ attrs $ do
     cols (Row cs:_) = NEL.length cs
 
     attrs :: [Attribute]
-    attrs = [ makeAttribute "rules" "groups"
+    attrs = [ class_ "table"
+            , makeAttribute "rules" "groups"
             , makeAttribute "frame" "hsides"
             , makeAttribute "cellspacing" "0"
             , makeAttribute "cellpadding" "6"
