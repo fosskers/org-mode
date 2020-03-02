@@ -16,7 +16,6 @@ import qualified Data.List.NonEmpty as NEL
 import           Data.Org
 import qualified Data.Text as T
 import           Lucid
-import           Lucid.Base (makeAttribute)
 
 -- TODO Give these all a `ToHtml a` instance.
 
@@ -97,26 +96,12 @@ listItemsHTML (ListItems is) = ul_ [class_ "org-ul"] $ traverse_ f is
     f (Item ws next) = li_ $ lineHTML ws >> maybe (pure ()) listItemsHTML next
 
 tableHTML :: NonEmpty Row -> Html ()
-tableHTML rs = table_ attrs $ do
-  colgroup_ $ sequence_ $ replicate (cols $ NEL.toList rs) $ col_ [class_ "org-left"]
-  thead_ toprow
+tableHTML rs = table_ [classes_ ["table", "table-bordered", "table-hover"]] $ do
+  thead_ [class_ "thead-light"] toprow
   tbody_ $ traverse_ f rest
   where
     toprow = tr_ $ maybe (pure ()) (traverse_ g) h
     (h, rest) = j $ NEL.toList rs
-
-    cols :: [Row] -> Int
-    cols []         = 0
-    cols (Break:xs) = cols xs
-    cols (Row cs:_) = NEL.length cs
-
-    attrs :: [Attribute]
-    attrs = [ class_ "table"
-            , makeAttribute "rules" "groups"
-            , makeAttribute "frame" "hsides"
-            , makeAttribute "cellspacing" "0"
-            , makeAttribute "cellpadding" "6"
-            , makeAttribute "border" "2" ]
 
     -- | Restructure the input such that the first `Row` is not a `Break`.
     j :: [Row] -> (Maybe (NonEmpty Column), [Row])
@@ -131,13 +116,13 @@ tableHTML rs = table_ attrs $ do
 
     -- | Render a header row.
     g :: Column -> Html ()
-    g Empty       = th_ [class_ "org-left", scope_ "col"] ""
-    g (Column ws) = th_ [class_ "org-left", scope_ "col"] $ lineHTML ws
+    g Empty       = th_ [scope_ "col"] ""
+    g (Column ws) = th_ [scope_ "col"] $ lineHTML ws
 
     -- | Render a normal row.
     k :: Column -> Html ()
-    k Empty       = td_ [class_ "org-left"] ""
-    k (Column ws) = td_ [class_ "org-left"] $ lineHTML ws
+    k Empty       = td_ ""
+    k (Column ws) = td_ $ lineHTML ws
 
 heading :: Int -> (Html () -> Html ())
 heading n = case n of
