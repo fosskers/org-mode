@@ -144,10 +144,10 @@ suite simple full = testGroup "Unit Tests"
       $ Table [Row [Column [Plain "A"], Empty, Column [Plain "C"]]]
     , testCase "Meta - Title"
       $ testPretty meta "Meta" "#+TITLE: Test"
-      $ Meta (Just "Test") Nothing Nothing Nothing
+      $ Meta (Just "Test") Nothing Nothing Nothing Nothing
     , testCase "Meta - Full"
       $ testPretty meta "Meta" "#+TITLE: Test\n#+DATE: 2020-02-17\n#+AUTHOR: Colin"
-      $ Meta (Just "Test") (Just $ fromGregorian 2020 2 17) (Just "Colin") Nothing
+      $ Meta (Just "Test") (Just $ fromGregorian 2020 2 17) (Just "Colin") Nothing Nothing
     ]
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do

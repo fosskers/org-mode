@@ -59,7 +59,8 @@ data Meta = Meta
   { metaTitle    :: Maybe Text
   , metaDate     :: Maybe Day
   , metaAuthor   :: Maybe Text
-  , metaHtmlHead :: Maybe Text }
+  , metaHtmlHead :: Maybe Text
+  , metaOptions  :: Maybe Text }
   deriving (Eq, Show)
 
 -- | Various sections of an org-mode file.
@@ -116,6 +117,7 @@ meta = L.lexeme space $ Meta
   <*> optional (string "#+DATE: "      *> date        <* space)
   <*> optional (string "#+AUTHOR: "    *> someTillEnd <* space)
   <*> optional (string "#+HTML_HEAD: " *> someTillEnd <* space)
+  <*> optional (string "#+OPTIONS: "   *> someTillEnd <* space)
   where
     date :: Parser Day
     date = fromGregorian
