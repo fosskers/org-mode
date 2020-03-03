@@ -1,4 +1,6 @@
 {-# LANGUAGE BangPatterns       #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 
 module Data.Org
@@ -33,6 +35,7 @@ module Data.Org
 import           Control.Applicative.Combinators.NonEmpty
 import           Control.Monad (void, when)
 import           Data.Functor (($>))
+import           Data.Hashable (Hashable(..))
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import           Data.Semigroup (sconcat)
@@ -40,6 +43,7 @@ import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time.Calendar (Day, fromGregorian, toGregorian)
 import           Data.Void (Void)
+import           GHC.Generics (Generic)
 import           System.FilePath (takeExtension)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
@@ -53,7 +57,7 @@ import           Text.Printf (printf)
 data OrgFile = OrgFile
   { orgMeta    :: Meta
   , orgContent :: [Org] }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show, Generic)
 
 data Meta = Meta
   { metaTitle    :: Maybe Text
@@ -61,7 +65,7 @@ data Meta = Meta
   , metaAuthor   :: Maybe Text
   , metaHtmlHead :: Maybe Text
   , metaOptions  :: Maybe Text }
-  deriving (Eq, Show)
+  deriving stock (Eq, Show, Generic)
 
 -- | Various sections of an org-mode file.
 data Org
@@ -72,17 +76,25 @@ data Org
   | List ListItems
   | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
 newtype ListItems = ListItems (NonEmpty Item)
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
 -- | A line in a bullet-list.
-data Item = Item (NonEmpty Words) (Maybe ListItems) deriving (Eq, Show)
+data Item = Item (NonEmpty Words) (Maybe ListItems)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
-data Row = Break | Row (NonEmpty Column) deriving (Eq, Show)
+data Row = Break | Row (NonEmpty Column)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
-data Column = Empty | Column (NonEmpty Words) deriving (Eq, Show)
+data Column = Empty | Column (NonEmpty Words)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
 data Words
   = Bold Text
@@ -95,13 +107,18 @@ data Words
   | Image URL
   | Punct Char
   | Plain Text
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
 -- | The url portion of a link.
-newtype URL = URL Text deriving stock (Eq, Show)
+newtype URL = URL Text
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
 -- | The programming language some source code block was written in.
-newtype Language = Language Text deriving stock (Eq, Show)
+newtype Language = Language Text
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
 
 --------------------------------------------------------------------------------
 -- Parser
