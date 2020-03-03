@@ -32,7 +32,7 @@ library
   exposed-modules: Data.Org
   build-depends:
     , filepath
-    , hashable            ^>=1.3
+    , hashable            >=1.2 && < 1.4
     , parser-combinators  >=1.1 && <1.3
 
 test-suite org-mode-test

@@ -211,7 +211,7 @@ item indent = do
   void $ string "- "
   l <- bullet
   let !nextInd = T.length leading + 2
-  Item l <$> (optional (try $ newline *> listItems nextInd))
+  Item l <$> optional (try $ newline *> listItems nextInd)
   where
     bullet :: Parser (NonEmpty Words)
     bullet = do
