@@ -97,7 +97,7 @@ listItemsHTML (ListItems is) = ul_ [class_ "org-ul"] $ traverse_ f is
 
 tableHTML :: NonEmpty Row -> Html ()
 tableHTML rs = table_ [classes_ ["table", "table-bordered", "table-hover"]] $ do
-  thead_ [class_ "thead-light"] toprow
+  thead_ [class_ "thead-dark"] toprow
   tbody_ $ traverse_ f rest
   where
     toprow = tr_ $ maybe (pure ()) (traverse_ g) h
