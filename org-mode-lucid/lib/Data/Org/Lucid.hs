@@ -1,21 +1,23 @@
-{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Data.Org.Lucid
   ( -- * HTML Generation
     OrgStyle(..)
+  , TOC(..)
   , defaultStyle
   , html
   , body
   ) where
 
 import           Data.Foldable (fold, traverse_)
+import           Data.Hashable (hash)
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import           Data.Org
 import qualified Data.Text as T
 import           Lucid
+import           Text.Printf (printf)
 
 -- TODO Give these all a `ToHtml a` instance.
 
@@ -27,7 +29,7 @@ data OrgStyle = OrgStyle
   { includeTitle     :: Bool
     -- ^ Whether to include the @#+TITLE: ...@ value as an @<h1>@ tag at the top
     -- of the document.
-  , tableOfContents  :: Maybe Word
+  , tableOfContents  :: Maybe TOC
     -- ^ Optionally include a Table of Contents after the title. The displayed
     -- depth is configurable.
   , numberedHeadings :: Bool
@@ -36,11 +38,19 @@ data OrgStyle = OrgStyle
     -- ^ Whether to add bootstrap classes to certain elements.
   }
 
+-- | Options for rendering a Table of Contents in the document.
+data TOC = TOC
+  { tocTitle :: T.Text
+    -- ^ The text of the TOC to be rendered in an @<h2>@ element.
+  , tocDepth :: Word
+    -- ^ How many levels to give the TOC.
+  }
+
 -- | Include the title and TOC, number all headings, and don't include Twitter
 -- Bootstrap classes. This mirrors the behaviour of Emacs' native HTML export
 -- functionality.
 defaultStyle :: OrgStyle
-defaultStyle = OrgStyle True (Just 3) True False
+defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) True False
 
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
 html :: OrgFile -> Html ()
@@ -55,15 +65,30 @@ html o@(OrgFile m _) = html_ $ do
 body :: OrgFile -> Html ()
 body o@(OrgFile m os) = do
   maybe (pure ()) (h1_ [class_ "title"] . toHtml) $ metaTitle m
-  -- toc o
+  toc o
   traverse_ orgHTML os
 
+-- | A unique identifier that can be used as an HTML @id@ attribute.
+tocLabel :: NonEmpty Words -> T.Text
+tocLabel ws = ("org" <>) . T.pack . take 6 . printf "%x" $ hash ws
+
+headings :: [Org] -> [(Int, NonEmpty Words)]
+headings = foldr f []
+  where
+    f :: Org -> [(Int, NonEmpty Words)] -> [(Int, NonEmpty Words)]
+    f (Heading n ws) acc = (n, ws) : acc
+    f _ acc              = acc
+
 toc :: OrgFile -> Html ()
-toc = undefined
+toc (OrgFile _ os) = case headings os of
+  [] -> pure ()
+  hs -> do
+    h2_ "Table of Contents"
+    ul_ $ traverse_ (\(_, ws) -> li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws) hs
 
 orgHTML :: Org -> Html ()
 orgHTML o = case o of
-  Heading n ws -> heading n $ lineHTML ws
+  Heading n ws -> heading n [id_ $ tocLabel ws] $ lineHTML ws
   Quote t -> blockquote_ . p_ $ toHtml t
   Example t -> pre_ [class_ "example"] $ toHtml t
   Code l t -> div_ [class_ "org-src-container"]
@@ -72,6 +97,15 @@ orgHTML o = case o of
   List is -> listItemsHTML is
   Table rw -> tableHTML rw
   Paragraph ws -> p_ $ paragraphHTML ws
+  where
+    heading :: Int -> [Attribute] -> Html () -> Html ()
+    heading n as h = case n of
+      1 -> h2_ as h
+      2 -> h3_ as h
+      3 -> h4_ as h
+      4 -> h5_ as h
+      5 -> h6_ as h
+      _ -> h
 
 paragraphHTML :: NonEmpty Words -> Html ()
 paragraphHTML (h :| t) = wordsHTML h <> para h t
@@ -123,15 +157,6 @@ tableHTML rs = table_ [classes_ ["table", "table-bordered", "table-hover"]] $ do
     k :: Column -> Html ()
     k Empty       = td_ ""
     k (Column ws) = td_ $ lineHTML ws
-
-heading :: Int -> (Html () -> Html ())
-heading n = case n of
-  1 -> h2_
-  2 -> h3_
-  3 -> h4_
-  4 -> h5_
-  5 -> h6_
-  _ -> id
 
 wordsHTML :: Words -> Html ()
 wordsHTML ws = case ws of
