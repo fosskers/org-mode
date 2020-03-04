@@ -6,8 +6,13 @@
 module Data.Org
   ( -- * Types
     OrgFile(..)
+  , emptyOrgFile
   , Meta(..)
-  , Org(..)
+  , emptyMeta
+  , OrgDoc(..)
+  , emptyDoc
+  , Section(..)
+  , Block(..)
   , Words(..)
   , ListItems(..)
   , Item(..)
@@ -21,6 +26,7 @@ module Data.Org
     -- | These are exposed for testing purposes.
   , meta
   , org
+  , section
   , paragraph
   , table
   , list
@@ -55,9 +61,12 @@ import           Text.Printf (printf)
 
 -- | A complete @.org@ file with metadata.
 data OrgFile = OrgFile
-  { orgMeta    :: Meta
-  , orgContent :: [Org] }
+  { orgMeta :: Meta
+  , orgDoc  :: OrgDoc }
   deriving stock (Eq, Show, Generic)
+
+emptyOrgFile :: OrgFile
+emptyOrgFile = OrgFile emptyMeta emptyDoc
 
 data Meta = Meta
   { metaTitle    :: Maybe Text
@@ -67,15 +76,36 @@ data Meta = Meta
   , metaOptions  :: Maybe Text }
   deriving stock (Eq, Show, Generic)
 
--- | Various sections of an org-mode file.
-data Org
-  = Heading (NonEmpty Words) [Org]
-  | Quote Text
+emptyMeta :: Meta
+emptyMeta = Meta Nothing Nothing Nothing Nothing Nothing
+
+-- | A recursive Org document. These are zero or more blocks of markup, followed
+-- by zero or more subsections.
+data OrgDoc = OrgDoc
+  { docBlocks   :: [Block]
+  , docSections :: [Section] }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
+
+emptyDoc :: OrgDoc
+emptyDoc = OrgDoc [] []
+
+-- | Some logically distinct block of Org content.
+data Block
+  = Quote Text
   | Example Text
   | Code (Maybe Language) Text
   | List ListItems
   | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (Hashable)
+
+-- | A subsection, marked by a heading line and followed recursively by an
+-- `OrgDoc`.
+data Section = Section
+  { sectionHeading :: NonEmpty Words
+  , sectionDoc     :: OrgDoc }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
 
@@ -142,28 +172,30 @@ meta = L.lexeme space $ Meta
       <*> (L.decimal <* char '-')
       <*> L.decimal
 
-org :: Parser [Org]
-org = L.lexeme space $ many block
+org :: Parser OrgDoc
+org = L.lexeme space $ OrgDoc
+  <$> many block
+  <*> many section
   where
-    block :: Parser Org
+    block :: Parser Block
     block = choice
-      [ try heading
-      , try code
+      [ try code
       , try example
       , try quote
       , try list
       , try table
       , paragraph ]
 
-heading :: Parser Org
-heading = L.lexeme space $ do
+-- TODO Naive and not correct. This will make all headings subordinate to the
+-- one previous.
+section :: Parser Section
+section = L.lexeme space $ do
   undefined
--- heading = L.lexeme space $ do
---   stars <- some $ char '*'
---   void $ char ' '
---   Heading (NEL.length stars) <$> line '\n'
+  -- void . some $ char '*'
+  -- void $ char ' '
+  -- Heading <$> line '\n' <*> (space *> org)
 
-quote :: Parser Org
+quote :: Parser Block
 quote = L.lexeme space $ do
   void top <* newline
   ls <- manyTill (manyTillEnd <* newline) bot
@@ -172,7 +204,7 @@ quote = L.lexeme space $ do
     top = string "#+" *> (string "BEGIN_QUOTE" <|> string "begin_quote")
     bot = string "#+" *> (string "END_QUOTE" <|> string "end_quote")
 
-example :: Parser Org
+example :: Parser Block
 example = L.lexeme space $ do
   void top <* newline
   ls <- manyTill (manyTillEnd <* newline) bot
@@ -181,7 +213,7 @@ example = L.lexeme space $ do
     top = string "#+" *> (string "BEGIN_EXAMPLE" <|> string "begin_example")
     bot = string "#+" *> (string "END_EXAMPLE" <|> string "end_example")
 
-code :: Parser Org
+code :: Parser Block
 code = L.lexeme space $ do
   lang <- top *> optional lng <* newline
   ls <- manyTill (manyTillEnd <* newline) bot
@@ -191,7 +223,7 @@ code = L.lexeme space $ do
     bot = string "#+" *> (string "END_SRC" <|> string "end_src")
     lng = char ' '  *> someTillEnd
 
-list :: Parser Org
+list :: Parser Block
 list = L.lexeme space $ List <$> listItems 0
 
 listItems :: Int -> Parser ListItems
@@ -223,7 +255,7 @@ item indent = do
     keepGoing :: Parser ()
     keepGoing = void $ char '\n' *> manyOf ' ' *> noneOf ['-', '\n']
 
-table :: Parser Org
+table :: Parser Block
 table = L.lexeme space $ Table <$> sepEndBy1 row (char '\n')
   where
     row :: Parser Row
@@ -241,7 +273,7 @@ table = L.lexeme space $ Table <$> sepEndBy1 row (char '\n')
       void $ someOf ' '
       (lookAhead (char '|') $> Empty) <|> (Column <$> line '|')
 
-paragraph :: Parser Org
+paragraph :: Parser Block
 paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
 
 line :: Char -> Parser (NonEmpty Words)
@@ -320,17 +352,17 @@ prettyOrgFile (OrgFile m os) = metas <> "\n\n" <> prettyOrgs os
     day d = case toGregorian d of
       (yr, mn, dy) -> printf "#+DATE: %d-%02d-%02d" yr mn dy
 
-prettyOrgs :: [Org] -> Text
-prettyOrgs = T.intercalate "\n\n" . map prettyOrg
+prettyOrgs :: OrgDoc -> Text
+prettyOrgs = undefined -- T.intercalate "\n\n" . map prettyOrg
 
-prettyOrg :: Org -> Text
-prettyOrg = prettyOrg' 1
+prettyOrg :: OrgDoc -> Text
+prettyOrg = undefined -- prettyOrg' 1
 
-prettyOrg' :: Int -> Org -> Text
-prettyOrg' depth o = case o of
-  Heading ws os -> T.intercalate "\n"
-    $ T.unwords (T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws))
-    : map (prettyOrg' (succ depth)) os
+prettyBlock :: Int -> Block -> Text
+prettyBlock depth o = case o of
+  -- Heading ws os -> T.intercalate "\n"
+  --   $ T.unwords (T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws))
+  --   : map (prettyOrg' (succ depth)) os
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
     <> t
     <> "\n#+end_src"

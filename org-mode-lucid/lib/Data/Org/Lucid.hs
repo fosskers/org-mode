@@ -63,38 +63,38 @@ html o@(OrgFile m _) = html_ $ do
 --
 -- Does not wrap contents in a @<body>@ tag.
 body :: OrgFile -> Html ()
-body o@(OrgFile m os) = do
+body o@(OrgFile m od) = do
   maybe (pure ()) (h1_ [class_ "title"] . toHtml) $ metaTitle m
-  toc o
-  traverse_ orgHTML os
+  -- toc o
+  orgHTML od
 
 -- | A unique identifier that can be used as an HTML @id@ attribute.
 tocLabel :: NonEmpty Words -> T.Text
 tocLabel ws = ("org" <>) . T.pack . take 6 . printf "%x" $ hash ws
 
-headings :: [Org] -> [(Int, NonEmpty Words)]
-headings = foldr f []
-  where
-    f :: Org -> [(Int, NonEmpty Words)] -> [(Int, NonEmpty Words)]
-    f = undefined  -- TODO Should be easy now!
+-- headings :: [Org] -> [(Int, NonEmpty Words)]
+-- headings = foldr f []
+--   where
+--     f :: Org -> [(Int, NonEmpty Words)] -> [(Int, NonEmpty Words)]
+    -- f = undefined  -- TODO Should be easy now!
     -- f (Heading n ws) acc = (n, ws) : acc
     -- f _ acc              = acc
 
-toc :: OrgFile -> Html ()
-toc (OrgFile _ os) = case headings os of
-  [] -> pure ()
-  hs -> do
-    h2_ "Table of Contents"
-    ul_ $ traverse_ (\(_, ws) -> li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws) hs
+-- toc :: OrgFile -> Html ()
+-- toc (OrgFile _ os) = case headings os of
+--   [] -> pure ()
+--   hs -> do
+--     h2_ "Table of Contents"
+--     ul_ $ traverse_ (\(_, ws) -> li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws) hs
 
-orgHTML :: Org -> Html ()
-orgHTML = orgHTML' 1
+orgHTML :: OrgDoc -> Html ()
+orgHTML = undefined -- orgHTML' 1
 
-orgHTML' :: Int -> Org -> Html ()
-orgHTML' depth o = case o of
-  Heading ws os -> do
-    heading [id_ $ tocLabel ws] $ lineHTML ws
-    traverse_ (orgHTML' (succ depth)) os
+blockHTML :: Int -> Block -> Html ()
+blockHTML depth b = case b of
+  -- Heading ws os -> do
+  --   heading [id_ $ tocLabel ws] $ lineHTML ws
+  --   traverse_ (orgHTML' (succ depth)) os
   Quote t -> blockquote_ . p_ $ toHtml t
   Example t -> pre_ [class_ "example"] $ toHtml t
   Code l t -> div_ [class_ "org-src-container"]
