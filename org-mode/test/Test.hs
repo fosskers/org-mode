@@ -29,9 +29,9 @@ suite :: T.Text -> T.Text -> TestTree
 suite simple full = testGroup "Unit Tests"
   [ testGroup "Basic Markup"
     [ testCase "Header" $ parseMaybe org "* Header"
-      @?= Just [Heading 1 [Plain "Header"]]
+      @?= Just [Heading [Plain "Header"] []]
     , testCase "Headers" $ parseMaybe org "* Header\n** Subheader"
-      @?= Just [Heading 1 [Plain "Header"], Heading 2 [Plain "Subheader"]]
+      @?= Just [Heading [Plain "Header"] [Heading [Plain "Subheader"] []]]
     , testCase "Bold" $ parseMaybe org "*Bold*"
       @?= Just [Paragraph [Bold "Bold"]]
     , testCase "Italics" $ parseMaybe org "/Italic/"

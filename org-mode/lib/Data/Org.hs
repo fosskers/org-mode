@@ -69,7 +69,7 @@ data Meta = Meta
 
 -- | Various sections of an org-mode file.
 data Org
-  = Heading Int (NonEmpty Words)
+  = Heading (NonEmpty Words) [Org]
   | Quote Text
   | Example Text
   | Code (Maybe Language) Text
@@ -157,9 +157,11 @@ org = L.lexeme space $ many block
 
 heading :: Parser Org
 heading = L.lexeme space $ do
-  stars <- some $ char '*'
-  void $ char ' '
-  Heading (NEL.length stars) <$> line '\n'
+  undefined
+-- heading = L.lexeme space $ do
+--   stars <- some $ char '*'
+--   void $ char ' '
+--   Heading (NEL.length stars) <$> line '\n'
 
 quote :: Parser Org
 quote = L.lexeme space $ do
@@ -322,8 +324,11 @@ prettyOrgs :: [Org] -> Text
 prettyOrgs = T.intercalate "\n\n" . map prettyOrg
 
 prettyOrg :: Org -> Text
-prettyOrg o = case o of
-  Heading n ws -> T.unwords $ T.replicate n "*" : NEL.toList (NEL.map prettyWords ws)
+prettyOrg o = prettyOrg' 1 o
+
+prettyOrg' :: Int -> Org -> Text
+prettyOrg' depth o = case o of
+  Heading ws os -> T.unwords $ T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws)
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
     <> t
     <> "\n#+end_src"

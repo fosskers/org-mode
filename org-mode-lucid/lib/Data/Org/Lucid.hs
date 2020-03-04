@@ -76,8 +76,9 @@ headings :: [Org] -> [(Int, NonEmpty Words)]
 headings = foldr f []
   where
     f :: Org -> [(Int, NonEmpty Words)] -> [(Int, NonEmpty Words)]
-    f (Heading n ws) acc = (n, ws) : acc
-    f _ acc              = acc
+    f = undefined  -- TODO Should be easy now!
+    -- f (Heading n ws) acc = (n, ws) : acc
+    -- f _ acc              = acc
 
 toc :: OrgFile -> Html ()
 toc (OrgFile _ os) = case headings os of
@@ -87,8 +88,11 @@ toc (OrgFile _ os) = case headings os of
     ul_ $ traverse_ (\(_, ws) -> li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws) hs
 
 orgHTML :: Org -> Html ()
-orgHTML o = case o of
-  Heading n ws -> heading n [id_ $ tocLabel ws] $ lineHTML ws
+orgHTML o = orgHTML' 1 o
+
+orgHTML' :: Int -> Org -> Html ()
+orgHTML' depth o = case o of
+  Heading ws os -> heading [id_ $ tocLabel ws] $ lineHTML ws
   Quote t -> blockquote_ . p_ $ toHtml t
   Example t -> pre_ [class_ "example"] $ toHtml t
   Code l t -> div_ [class_ "org-src-container"]
@@ -98,8 +102,8 @@ orgHTML o = case o of
   Table rw -> tableHTML rw
   Paragraph ws -> p_ $ paragraphHTML ws
   where
-    heading :: Int -> [Attribute] -> Html () -> Html ()
-    heading n as h = case n of
+    heading :: [Attribute] -> Html () -> Html ()
+    heading as h = case depth of
       1 -> h2_ as h
       2 -> h3_ as h
       3 -> h4_ as h
