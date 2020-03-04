@@ -33,7 +33,6 @@ module Data.Org
   , line
     -- * Pretty Printing
   , prettyOrgFile
-  , prettyOrgs
   , prettyOrg
   , prettyWords
   ) where
@@ -173,9 +172,12 @@ meta = L.lexeme space $ Meta
       <*> L.decimal
 
 org :: Parser OrgDoc
-org = L.lexeme space $ OrgDoc
+org = org' 1
+
+org' :: Int -> Parser OrgDoc
+org' depth = L.lexeme space $ OrgDoc
   <$> many block
-  <*> many section
+  <*> many (section depth)
   where
     block :: Parser Block
     block = choice
@@ -184,16 +186,16 @@ org = L.lexeme space $ OrgDoc
       , try quote
       , try list
       , try table
-      , paragraph ]
+      , paragraph ]  -- TODO Paragraph needs to fail if it detects a heading.
 
--- TODO Naive and not correct. This will make all headings subordinate to the
--- one previous.
-section :: Parser Section
-section = L.lexeme space $ do
-  undefined
-  -- void . some $ char '*'
-  -- void $ char ' '
-  -- Heading <$> line '\n' <*> (space *> org)
+section :: Int -> Parser Section
+section depth = L.lexeme space $ do
+  stars <- someOf '*'
+  -- Fail if we've found a parent heading --
+  when (T.length stars < depth) $ failure Nothing mempty
+  -- Otherwise continue --
+  void $ char ' '
+  Section <$> line '\n' <*> (space *> org' (succ depth))
 
 quote :: Parser Block
 quote = L.lexeme space $ do
@@ -340,7 +342,7 @@ manyOf c = takeWhileP (Just $ "many of " <> [c]) (== c)
 -- Pretty Printing
 
 prettyOrgFile :: OrgFile -> Text
-prettyOrgFile (OrgFile m os) = metas <> "\n\n" <> prettyOrgs os
+prettyOrgFile (OrgFile m os) = metas <> "\n\n" <> prettyOrg os
   where
     metas = T.intercalate "\n" $
       maybe [] (\t -> ["#+TITLE: " <> t]) (metaTitle m)
@@ -352,17 +354,21 @@ prettyOrgFile (OrgFile m os) = metas <> "\n\n" <> prettyOrgs os
     day d = case toGregorian d of
       (yr, mn, dy) -> printf "#+DATE: %d-%02d-%02d" yr mn dy
 
-prettyOrgs :: OrgDoc -> Text
-prettyOrgs = undefined -- T.intercalate "\n\n" . map prettyOrg
-
 prettyOrg :: OrgDoc -> Text
-prettyOrg = undefined -- prettyOrg' 1
+prettyOrg  = prettyOrg' 1
 
-prettyBlock :: Int -> Block -> Text
-prettyBlock depth o = case o of
-  -- Heading ws os -> T.intercalate "\n"
-  --   $ T.unwords (T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws))
-  --   : map (prettyOrg' (succ depth)) os
+prettyOrg' :: Int -> OrgDoc -> Text
+prettyOrg' depth (OrgDoc bs ss) =
+  T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
+
+prettySection :: Int -> Section -> Text
+prettySection depth (Section ws od) = heading <> "\n\n" <> subdoc
+  where
+    heading = T.unwords $ T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws)
+    subdoc = prettyOrg' (succ depth) od
+
+prettyBlock :: Block -> Text
+prettyBlock o = case o of
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
     <> t
     <> "\n#+end_src"

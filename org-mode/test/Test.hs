@@ -28,9 +28,9 @@ main = do
 suite :: T.Text -> T.Text -> TestTree
 suite simple full = testGroup "Unit Tests"
   [ testGroup "Basic Markup"
-    [ testCase "Header" $ parseMaybe section "* A"
+    [ testCase "Header" $ parseMaybe (section 1) "* A"
       @?= Just (Section [Plain "A"] emptyDoc)
-    , testCase "Headers" $ parseMaybe section "* A\n** B"
+    , testCase "Headers" $ parseMaybe (section 1) "* A\n** B"
       @?= Just (Section [Plain "A"] (OrgDoc [] [Section [Plain "B"] emptyDoc]))
 
     , testCase "Bold" $ parseMaybe org "*Bold*"
@@ -154,7 +154,7 @@ suite simple full = testGroup "Unit Tests"
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do
         let !orig = parseMaybe org "A /B/. C?"
-        (prettyOrgs <$> orig) @?= Just "A /B/. C?"
+        (prettyOrg <$> orig) @?= Just "A /B/. C?"
     ]
   , testGroup "Full Files"
     [ testCase "Simple" $ case parse orgFile "simple.org" simple of
