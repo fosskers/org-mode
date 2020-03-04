@@ -178,5 +178,5 @@ testPretty parser labl src expt = case parse parser labl src of
 
 -- | Conclusion: If the separator appears but the next parse attempt fails, the
 -- /whole/ thing fails.
-sepTest :: Parsec Void Text [Char]
+sepTest :: Parsec Void Text String
 sepTest = char 'A' `sepEndBy1` char '.'
