@@ -324,11 +324,13 @@ prettyOrgs :: [Org] -> Text
 prettyOrgs = T.intercalate "\n\n" . map prettyOrg
 
 prettyOrg :: Org -> Text
-prettyOrg o = prettyOrg' 1 o
+prettyOrg = prettyOrg' 1
 
 prettyOrg' :: Int -> Org -> Text
 prettyOrg' depth o = case o of
-  Heading ws os -> T.unwords $ T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws)
+  Heading ws os -> T.intercalate "\n"
+    $ T.unwords (T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws))
+    : map (prettyOrg' (succ depth)) os
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
     <> t
     <> "\n#+end_src"

@@ -88,11 +88,13 @@ toc (OrgFile _ os) = case headings os of
     ul_ $ traverse_ (\(_, ws) -> li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws) hs
 
 orgHTML :: Org -> Html ()
-orgHTML o = orgHTML' 1 o
+orgHTML = orgHTML' 1
 
 orgHTML' :: Int -> Org -> Html ()
 orgHTML' depth o = case o of
-  Heading ws os -> heading [id_ $ tocLabel ws] $ lineHTML ws
+  Heading ws os -> do
+    heading [id_ $ tocLabel ws] $ lineHTML ws
+    traverse_ (orgHTML' (succ depth)) os
   Quote t -> blockquote_ . p_ $ toHtml t
   Example t -> pre_ [class_ "example"] $ toHtml t
   Code l t -> div_ [class_ "org-src-container"]
