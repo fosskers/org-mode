@@ -177,7 +177,7 @@ org = org' 1
 org' :: Int -> Parser OrgDoc
 org' depth = L.lexeme space $ OrgDoc
   <$> many block
-  <*> many (section depth)
+  <*> many (try $ section depth)
   where
     block :: Parser Block
     block = choice
@@ -188,14 +188,20 @@ org' depth = L.lexeme space $ OrgDoc
       , try table
       , paragraph ]  -- TODO Paragraph needs to fail if it detects a heading.
 
+-- | If a line stars with @*@ and a space, it is a `Section` heading.
+heading :: Parser (T.Text, NonEmpty Words)
+heading = (,)
+  <$> someOf '*' <* char ' '
+  <*> line '\n'
+
 section :: Int -> Parser Section
 section depth = L.lexeme space $ do
-  stars <- someOf '*'
+  (stars, ws) <- heading
   -- Fail if we've found a parent heading --
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
-  void $ char ' '
-  Section <$> line '\n' <*> (space *> org' (succ depth))
+  void space
+  Section ws <$> org' (succ depth)
 
 quote :: Parser Block
 quote = L.lexeme space $ do
@@ -276,7 +282,9 @@ table = L.lexeme space $ Table <$> sepEndBy1 row (char '\n')
       (lookAhead (char '|') $> Empty) <|> (Column <$> line '|')
 
 paragraph :: Parser Block
-paragraph = L.lexeme space $ Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
+paragraph = L.lexeme space $ do
+  notFollowedBy heading
+  Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
 
 line :: Char -> Parser (NonEmpty Words)
 line end = sepEndBy1 (wordChunk end) (manyOf ' ')
@@ -362,9 +370,9 @@ prettyOrg' depth (OrgDoc bs ss) =
   T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
 
 prettySection :: Int -> Section -> Text
-prettySection depth (Section ws od) = heading <> "\n\n" <> subdoc
+prettySection depth (Section ws od) = headig <> "\n\n" <> subdoc
   where
-    heading = T.unwords $ T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws)
+    headig = T.unwords $ T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws)
     subdoc = prettyOrg' (succ depth) od
 
 prettyBlock :: Block -> Text
