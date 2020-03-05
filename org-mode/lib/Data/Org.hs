@@ -3,6 +3,16 @@
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
 
+-- |
+-- Module    : Data.Org
+-- Copyright : (c) Colin Woodbury, 2020
+-- License   : BSD3
+-- Maintainer: Colin Woodbury <colin@fosskers.ca>
+--
+-- This library parses text in the <https://orgmode.org/ Emacs Org Mode> format.
+--
+-- Use the `org` function to parse a `T.Text` value.
+
 module Data.Org
   ( -- * Types
     OrgFile(..)
@@ -20,12 +30,13 @@ module Data.Org
   , Column(..)
   , URL(..)
   , Language(..)
-    -- * Parser
-  , orgFile
+    -- * Parsing
+  , org
     -- ** Internal Parsers
     -- | These are exposed for testing purposes.
+  , orgFile
   , meta
-  , org
+  , orgP
   , section
   , paragraph
   , table
@@ -67,6 +78,13 @@ data OrgFile = OrgFile
 emptyOrgFile :: OrgFile
 emptyOrgFile = OrgFile emptyMeta emptyDoc
 
+-- | Top-level fields like:
+--
+-- @
+-- #+TITLE: Curing Cancer with Haskell
+-- #+DATE: 2020-02-25
+-- #+AUTHOR: Colin
+-- @
 data Meta = Meta
   { metaTitle    :: Maybe Text
   , metaDate     :: Maybe Day
@@ -80,6 +98,14 @@ emptyMeta = Meta Nothing Nothing Nothing Nothing Nothing
 
 -- | A recursive Org document. These are zero or more blocks of markup, followed
 -- by zero or more subsections.
+--
+-- @
+-- This is some top-level text.
+--
+-- * Important heading
+--
+-- ** Less important subheading
+-- @
 data OrgDoc = OrgDoc
   { docBlocks   :: [Block]
   , docSections :: [Section] }
@@ -102,29 +128,56 @@ data Block
 
 -- | A subsection, marked by a heading line and followed recursively by an
 -- `OrgDoc`.
+--
+-- @
+-- * This is a Heading
+--
+-- This is content in the sub ~OrgDoc~.
+-- @
 data Section = Section
   { sectionHeading :: NonEmpty Words
   , sectionDoc     :: OrgDoc }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
 
+-- | An org list constructed of @-@ characters.
+--
+-- @
+-- - Feed the cat
+--   - The good stuff
+-- - Feed the dog
+--   - He'll eat anything
+-- - Feed the bird
+-- - Feed the alligator
+-- - Feed the elephant
+-- @
 newtype ListItems = ListItems (NonEmpty Item)
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
 
--- | A line in a bullet-list.
+-- | A line in a bullet-list. Can contain sublists, as shown in `ListItems`.
 data Item = Item (NonEmpty Words) (Maybe ListItems)
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
 
+-- | A row in an org table. Can have content or be a horizontal rule.
+--
+-- @
+-- | A | B | C |
+-- |---+---+---|
+-- | D | E | F |
+-- @
 data Row = Break | Row (NonEmpty Column)
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
 
+-- | A possibly empty column in an org table.
 data Column = Empty | Column (NonEmpty Words)
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
 
+-- | The fundamental unit of Org text content. `Plain` units are split
+-- word-by-word.
 data Words
   = Bold Text
   | Italic Text
@@ -152,10 +205,14 @@ newtype Language = Language Text
 --------------------------------------------------------------------------------
 -- Parser
 
+-- | Attempt to parse an `OrgFile`.
+org :: Text -> Maybe OrgFile
+org = parseMaybe orgFile
+
 type Parser = Parsec Void Text
 
 orgFile :: Parser OrgFile
-orgFile = space *> L.lexeme space (OrgFile <$> meta <*> org) <* eof
+orgFile = space *> L.lexeme space (OrgFile <$> meta <*> orgP) <* eof
 
 meta :: Parser Meta
 meta = L.lexeme space $ Meta
@@ -171,11 +228,11 @@ meta = L.lexeme space $ Meta
       <*> (L.decimal <* char '-')
       <*> L.decimal
 
-org :: Parser OrgDoc
-org = org' 1
+orgP :: Parser OrgDoc
+orgP = orgP' 1
 
-org' :: Int -> Parser OrgDoc
-org' depth = L.lexeme space $ OrgDoc
+orgP' :: Int -> Parser OrgDoc
+orgP' depth = L.lexeme space $ OrgDoc
   <$> many block
   <*> many (try $ section depth)
   where
@@ -201,7 +258,7 @@ section depth = L.lexeme space $ do
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
   void space
-  Section ws <$> org' (succ depth)
+  Section ws <$> orgP' (succ depth)
 
 quote :: Parser Block
 quote = L.lexeme space $ do

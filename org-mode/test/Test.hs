@@ -33,51 +33,51 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Header - Subsection" $ parseMaybe (section 1) "* A\n** B"
       @?= Just (Section [Plain "A"] (OrgDoc [] [Section [Plain "B"] emptyDoc]))
     , testCase "Header - Back again"
-      $ testPretty org "Header" "* A\n** B\n* C"
+      $ testPretty orgP "Header" "* A\n** B\n* C"
       $ OrgDoc [] [ Section [Plain "A"] (OrgDoc [] [Section [Plain "B"] emptyDoc])
                   , Section [Plain "C"] emptyDoc ]
     , testCase "Header - Contents"
-      $ testPretty org "Header" "* A\nD\n\n** B\n* C"  -- TODO Requires an extra newline!
+      $ testPretty orgP "Header" "* A\nD\n\n** B\n* C"  -- TODO Requires an extra newline!
       $ OrgDoc []
       [ Section [Plain "A"] (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] emptyDoc])
       , Section [Plain "C"] emptyDoc ]
 
-    , testCase "Bold" $ parseMaybe org "*Bold*"
+    , testCase "Bold" $ parseMaybe orgP "*Bold*"
       @?= Just (OrgDoc [Paragraph [Bold "Bold"]] [])
-    , testCase "Italics" $ parseMaybe org "/Italic/"
+    , testCase "Italics" $ parseMaybe orgP "/Italic/"
       @?= Just (OrgDoc [Paragraph [Italic "Italic"]] [])
-    , testCase "Highlight" $ parseMaybe org "~Highlight~"
+    , testCase "Highlight" $ parseMaybe orgP "~Highlight~"
       @?= Just (OrgDoc [Paragraph [Highlight "Highlight"]] [])
-    , testCase "Verbatim" $ parseMaybe org "=Verbatim="
+    , testCase "Verbatim" $ parseMaybe orgP "=Verbatim="
       @?= Just (OrgDoc [Paragraph [Verbatim "Verbatim"]] [])
-    , testCase "Underline" $ parseMaybe org "_Underline_"
+    , testCase "Underline" $ parseMaybe orgP "_Underline_"
       @?= Just (OrgDoc [Paragraph [Underline "Underline"]] [])
-    , testCase "Strike" $ parseMaybe org "+Strike+"
+    , testCase "Strike" $ parseMaybe orgP "+Strike+"
       @?= Just (OrgDoc [Paragraph [Strike "Strike"]] [])
 
-    , testCase "Link" $ parseMaybe org "[[https://www.fosskers.ca][Site]]"
+    , testCase "Link" $ parseMaybe orgP "[[https://www.fosskers.ca][Site]]"
       @?= Just (OrgDoc [Paragraph [Link (URL "https://www.fosskers.ca") (Just "Site")]] [])
-    , testCase "Link (no desc)" $ parseMaybe org "[[https://www.fosskers.ca]]"
+    , testCase "Link (no desc)" $ parseMaybe orgP "[[https://www.fosskers.ca]]"
       @?= Just (OrgDoc [Paragraph [Link (URL "https://www.fosskers.ca") Nothing]] [])
 
-    , testCase "Image" $ parseMaybe org "[[/path/to/img.jpeg]]"
+    , testCase "Image" $ parseMaybe orgP "[[/path/to/img.jpeg]]"
       @?= Just (OrgDoc [Paragraph [Image (URL "/path/to/img.jpeg")]] [])
     , testCase "Image - False Positive"
       $ testPretty paragraph "Image" "[[http://a.ca][hi]] [[a.png]]"
       $ Paragraph [Link (URL "http://a.ca") (Just "hi"), Image (URL "a.png")]
 
-    , testCase "Plain" $ parseMaybe org "This is a line"
+    , testCase "Plain" $ parseMaybe orgP "This is a line"
       @?= Just (OrgDoc [Paragraph [Plain "This", Plain "is", Plain "a", Plain "line"]] [])
     ]
   , testGroup "Markup Edge Cases"
-    [ testCase "Before" $ parseMaybe org "This is *not*bold."
+    [ testCase "Before" $ parseMaybe orgP "This is *not*bold."
       @?= Just (OrgDoc [Paragraph [Plain "This", Plain "is", Plain "*not*bold."]] [])
-    , testCase "After" $ parseMaybe org "Neither is *this*here."
+    , testCase "After" $ parseMaybe orgP "Neither is *this*here."
       @?= Just (OrgDoc [Paragraph [Plain "Neither", Plain "is", Plain "*this*here."]] [])
-    , testCase "Punctuation - Comma" $ parseMaybe org "*This*, is bold."
+    , testCase "Punctuation - Comma" $ parseMaybe orgP "*This*, is bold."
       @?= Just (OrgDoc [Paragraph [Bold "This", Punct ',', Plain "is", Plain "bold."]] [])
 
-    , testCase "Punctuation - Paren" $ parseMaybe org "(the ~be~)"
+    , testCase "Punctuation - Paren" $ parseMaybe orgP "(the ~be~)"
       @?= Just (OrgDoc [Paragraph [Punct '(', Plain "the", Highlight "be", Punct ')']] [])
 
     , testCase "Punctuation - Double parens"
@@ -93,19 +93,19 @@ suite simple full = testGroup "Unit Tests"
       [Plain "A", Plain "~", Plain "B"]
     ]
   , testGroup "Composite Structures"
-    [ testCase "Example" $ parseMaybe org "#+begin_example\nHi!\n\nHo\n#+end_example"
+    [ testCase "Example" $ parseMaybe orgP "#+begin_example\nHi!\n\nHo\n#+end_example"
       @?= Just (OrgDoc [Example "Hi!\n\nHo"] [])
-    , testCase "Example - Empty" $ parseMaybe org "#+begin_example\n#+end_example"
+    , testCase "Example - Empty" $ parseMaybe orgP "#+begin_example\n#+end_example"
       @?= Just (OrgDoc [Example ""] [])
-    , testCase "Quote" $ parseMaybe org "#+begin_quote\nHi!\n\nHo\n#+end_quote"
+    , testCase "Quote" $ parseMaybe orgP "#+begin_quote\nHi!\n\nHo\n#+end_quote"
       @?= Just (OrgDoc [Quote "Hi!\n\nHo"] [])
-    , testCase "Quote - Empty" $ parseMaybe org "#+begin_quote\n#+end_quote"
+    , testCase "Quote - Empty" $ parseMaybe orgP "#+begin_quote\n#+end_quote"
       @?= Just (OrgDoc [Quote ""] [])
-    , testCase "Code" $ parseMaybe org "#+begin_src haskell\n1 + 1\n#+end_src"
+    , testCase "Code" $ parseMaybe orgP "#+begin_src haskell\n1 + 1\n#+end_src"
       @?= Just (OrgDoc [Code (Just $ Language "haskell") "1 + 1"] [])
-    , testCase "Code - Empty" $ parseMaybe org "#+begin_src haskell\n#+end_src"
+    , testCase "Code - Empty" $ parseMaybe orgP "#+begin_src haskell\n#+end_src"
       @?= Just (OrgDoc [Code (Just $ Language "haskell") ""] [])
-    , testCase "Code - No Language" $ parseMaybe org "#+begin_src\n1 + 1\n#+end_src"
+    , testCase "Code - No Language" $ parseMaybe orgP "#+begin_src\n1 + 1\n#+end_src"
       @?= Just (OrgDoc [Code Nothing "1 + 1"] [])
 
      , testCase "List - Single Indent"
@@ -124,7 +124,7 @@ suite simple full = testGroup "Unit Tests"
                [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing, Item [Plain "C"] Nothing])
                , Item [Plain "D"] Nothing ])
 
-    , testCase "List - Things after" $ parseMaybe org "- A\n  - B\n- C\n\nD"
+    , testCase "List - Things after" $ parseMaybe orgP "- A\n  - B\n- C\n\nD"
       @?= Just (OrgDoc [ List (ListItems
                                [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])
                                , Item [Plain "C"] Nothing])
@@ -162,7 +162,7 @@ suite simple full = testGroup "Unit Tests"
     ]
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do
-        let !orig = parseMaybe org "A /B/. C?"
+        let !orig = parseMaybe orgP "A /B/. C?"
         (prettyOrg <$> orig) @?= Just "A /B/. C?"
     ]
   , testGroup "Full Files"
