@@ -1,14 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Data.Org.Lucid
-  ( -- * HTML Generation
-    OrgStyle(..)
-  , TOC(..)
-  , defaultStyle
+  ( -- * HTML Conversion
+    TOC(..)
   , html
   , body
+    -- * Styling
+  , OrgStyle(..)
+  , defaultStyle
   ) where
 
+import           Control.Monad (when)
 import           Data.Foldable (fold, traverse_)
 import           Data.Hashable (hash)
 import           Data.List (intersperse)
@@ -19,23 +21,19 @@ import qualified Data.Text as T
 import           Lucid
 import           Text.Printf (printf)
 
--- TODO Give these all a `ToHtml a` instance.
-
 --------------------------------------------------------------------------------
 -- HTML Generation
 
 -- | Rendering options.
 data OrgStyle = OrgStyle
-  { includeTitle     :: Bool
+  { includeTitle    :: Bool
     -- ^ Whether to include the @#+TITLE: ...@ value as an @<h1>@ tag at the top
     -- of the document.
-  , tableOfContents  :: Maybe TOC
+  , tableOfContents :: Maybe TOC
     -- ^ Optionally include a Table of Contents after the title. The displayed
     -- depth is configurable.
-  , numberedHeadings :: Bool
-    -- ^ Whether to number each heading.
-  , bootstrap        :: Bool
-    -- ^ Whether to add bootstrap classes to certain elements.
+  , bootstrap       :: Bool
+    -- ^ Whether to add Twitter Bootstrap classes to certain elements.
   }
 
 -- | Options for rendering a Table of Contents in the document.
@@ -43,60 +41,66 @@ data TOC = TOC
   { tocTitle :: T.Text
     -- ^ The text of the TOC to be rendered in an @<h2>@ element.
   , tocDepth :: Word
-    -- ^ How many levels to give the TOC.
+    -- ^ The number of levels to give the TOC.
   }
 
--- | Include the title and TOC, number all headings, and don't include Twitter
--- Bootstrap classes. This mirrors the behaviour of Emacs' native HTML export
+-- | Include the title and 3-level TOC, and don't include Twitter Bootstrap
+-- classes. This mirrors the behaviour of Emacs' native HTML export
 -- functionality.
 defaultStyle :: OrgStyle
-defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) True False
+defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) False
 
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
-html :: OrgFile -> Html ()
-html o@(OrgFile m _) = html_ $ do
+--
+-- Note: Consider `defaultStyle` for the style.
+html :: OrgStyle -> OrgFile -> Html ()
+html os o@(OrgFile m _) = html_ $ do
   head_ $ title_ (maybe "" toHtml $ metaTitle m)
-  body_ $ body o
+  body_ $ body os o
 
 -- | Convert a parsed `OrgFile` into the body of an HTML document, so that it
 -- could be injected into other Lucid `Html` structures.
 --
 -- Does not wrap contents in a @<body>@ tag.
-body :: OrgFile -> Html ()
-body (OrgFile m od) = do
-  maybe (pure ()) (h1_ [class_ "title"] . toHtml) $ metaTitle m
-  toc od
-  orgHTML od
+--
+-- Note: Consider `defaultStyle` for the style.
+body :: OrgStyle -> OrgFile -> Html ()
+body os (OrgFile m od) = do
+  when (includeTitle os) $ traverse_ (h1_ [class_ "title"] . toHtml) $ metaTitle m
+  traverse_ (`toc` od) $ tableOfContents os
+  orgHTML os od
 
 -- | A unique identifier that can be used as an HTML @id@ attribute.
 tocLabel :: NonEmpty Words -> T.Text
 tocLabel ws = ("org" <>) . T.pack . take 6 . printf "%x" $ hash ws
 
-toc :: OrgDoc -> Html ()
-toc (OrgDoc _ []) = pure ()
-toc od            = h2_ "Table of Contents" *> toc' od
+toc :: TOC -> OrgDoc -> Html ()
+toc _ (OrgDoc _ []) = pure ()
+toc t od            = h2_ (toHtml $ tocTitle t) *> toc' t 1 od
 
-toc' :: OrgDoc -> Html ()
-toc' (OrgDoc _ []) = pure ()
-toc' (OrgDoc _ ss) = ul_ $ traverse_ f ss
+toc' :: TOC -> Word -> OrgDoc -> Html ()
+toc' _ _ (OrgDoc _ []) = pure ()
+toc' t depth (OrgDoc _ ss)
+  | depth > tocDepth t = pure ()
+  | otherwise = ul_ $ traverse_ f ss
   where
     f :: Section -> Html ()
     f (Section ws od) = do
       li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws
-      toc' od
+      toc' t (succ depth) od
 
-orgHTML :: OrgDoc -> Html ()
-orgHTML = orgHTML' 1
+orgHTML :: OrgStyle -> OrgDoc -> Html ()
+orgHTML os = orgHTML' os 1
 
-orgHTML' :: Int -> OrgDoc -> Html ()
-orgHTML' depth (OrgDoc bs ss) = do
-  traverse_ blockHTML bs
-  traverse_ (sectionHTML depth) ss
+orgHTML' :: OrgStyle -> Int -> OrgDoc -> Html ()
+orgHTML' os depth (OrgDoc bs ss) = do
+  traverse_ (blockHTML os) bs
+  traverse_ (sectionHTML os depth) ss
 
-sectionHTML :: Int -> Section -> Html ()
-sectionHTML depth (Section ws od) = do
+sectionHTML :: OrgStyle -> Int -> Section -> Html ()
+sectionHTML os depth (Section ws od) = do
   heading [id_ $ tocLabel ws] $ lineHTML ws
-  orgHTML' (succ depth) od
+  orgHTML' os (succ depth) od
   where
     heading :: [Attribute] -> Html () -> Html ()
     heading as h = case depth of
@@ -107,15 +111,15 @@ sectionHTML depth (Section ws od) = do
       5 -> h6_ as h
       _ -> h
 
-blockHTML :: Block -> Html ()
-blockHTML b = case b of
+blockHTML :: OrgStyle -> Block -> Html ()
+blockHTML os b = case b of
   Quote t -> blockquote_ . p_ $ toHtml t
   Example t -> pre_ [class_ "example"] $ toHtml t
   Code l t -> div_ [class_ "org-src-container"]
     $ pre_ [classes_ $ "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
     $ toHtml t
   List is -> listItemsHTML is
-  Table rw -> tableHTML rw
+  Table rw -> tableHTML os rw
   Paragraph ws -> p_ $ paragraphHTML ws
 
 paragraphHTML :: NonEmpty Words -> Html ()
@@ -140,11 +144,19 @@ listItemsHTML (ListItems is) = ul_ [class_ "org-ul"] $ traverse_ f is
     f :: Item -> Html ()
     f (Item ws next) = li_ $ lineHTML ws >> maybe (pure ()) listItemsHTML next
 
-tableHTML :: NonEmpty Row -> Html ()
-tableHTML rs = table_ [classes_ ["table", "table-bordered", "table-hover"]] $ do
-  thead_ [class_ "thead-dark"] toprow
+tableHTML :: OrgStyle -> NonEmpty Row -> Html ()
+tableHTML os rs = table_ tblClasses $ do
+  thead_ headClasses toprow
   tbody_ $ traverse_ f rest
   where
+    tblClasses
+      | bootstrap os = [classes_ ["table", "table-bordered", "table-hover"]]
+      | otherwise = []
+
+    headClasses
+      | bootstrap os = [class_ "thead-dark"]
+      | otherwise = []
+
     toprow = tr_ $ maybe (pure ()) (traverse_ g) h
     (h, rest) = j $ NEL.toList rs
 
