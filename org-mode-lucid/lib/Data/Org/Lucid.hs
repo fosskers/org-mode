@@ -1,13 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- Module    : Data.Org.Lucid
+-- Copyright : (c) Colin Woodbury, 2020
+-- License   : BSD3
+-- Maintainer: Colin Woodbury <colin@fosskers.ca>
+--
+-- This library converts `OrgFile` values into `Html` structures from the Lucid
+-- library. This allows one to generate valid, standalone HTML pages from an Org
+-- file, but also to inject that HTML into a preexisting Lucid `Html` structure,
+-- such as a certain section of a web page.
+
 module Data.Org.Lucid
   ( -- * HTML Conversion
-    TOC(..)
-  , html
+    -- | Consider `defaultStyle` as the style to pass to these functions.
+    html
   , body
     -- * Styling
   , OrgStyle(..)
   , defaultStyle
+  , TOC(..)
   ) where
 
 import           Control.Monad (when)
@@ -44,15 +56,13 @@ data TOC = TOC
     -- ^ The number of levels to give the TOC.
   }
 
--- | Include the title and 3-level TOC, and don't include Twitter Bootstrap
--- classes. This mirrors the behaviour of Emacs' native HTML export
--- functionality.
+-- | Include the title and 3-level TOC named @Table of Contents@, and don't
+-- include Twitter Bootstrap classes. This mirrors the behaviour of Emacs'
+-- native HTML export functionality.
 defaultStyle :: OrgStyle
 defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) False
 
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
---
--- Note: Consider `defaultStyle` for the style.
 html :: OrgStyle -> OrgFile -> Html ()
 html os o@(OrgFile m _) = html_ $ do
   head_ $ title_ (maybe "" toHtml $ metaTitle m)
@@ -61,9 +71,7 @@ html os o@(OrgFile m _) = html_ $ do
 -- | Convert a parsed `OrgFile` into the body of an HTML document, so that it
 -- could be injected into other Lucid `Html` structures.
 --
--- Does not wrap contents in a @<body>@ tag.
---
--- Note: Consider `defaultStyle` for the style.
+-- Does __not__ wrap contents in a @\<body\>@ tag.
 body :: OrgStyle -> OrgFile -> Html ()
 body os (OrgFile m od) = do
   when (includeTitle os) $ traverse_ (h1_ [class_ "title"] . toHtml) $ metaTitle m
@@ -72,7 +80,7 @@ body os (OrgFile m od) = do
 
 -- | A unique identifier that can be used as an HTML @id@ attribute.
 tocLabel :: NonEmpty Words -> T.Text
-tocLabel ws = ("org" <>) . T.pack . take 6 . printf "%x" $ hash ws
+tocLabel = ("org" <>) . T.pack . take 6 . printf "%x" . hash
 
 toc :: TOC -> OrgDoc -> Html ()
 toc _ (OrgDoc _ []) = pure ()
