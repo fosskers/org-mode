@@ -88,21 +88,17 @@ tocLabel ws = ("org" <>) . T.pack . take 6 . printf "%x" $ hash ws
 --     ul_ $ traverse_ (\(_, ws) -> li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws) hs
 
 orgHTML :: OrgDoc -> Html ()
-orgHTML = undefined -- orgHTML' 1
+orgHTML = orgHTML' 1
 
-blockHTML :: Int -> Block -> Html ()
-blockHTML depth b = case b of
-  -- Heading ws os -> do
-  --   heading [id_ $ tocLabel ws] $ lineHTML ws
-  --   traverse_ (orgHTML' (succ depth)) os
-  Quote t -> blockquote_ . p_ $ toHtml t
-  Example t -> pre_ [class_ "example"] $ toHtml t
-  Code l t -> div_ [class_ "org-src-container"]
-    $ pre_ [classes_ $ "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
-    $ toHtml t
-  List is -> listItemsHTML is
-  Table rw -> tableHTML rw
-  Paragraph ws -> p_ $ paragraphHTML ws
+orgHTML' :: Int -> OrgDoc -> Html ()
+orgHTML' depth (OrgDoc bs ss) = do
+  traverse_ blockHTML bs
+  traverse_ (sectionHTML depth) ss
+
+sectionHTML :: Int -> Section -> Html ()
+sectionHTML depth (Section ws od) = do
+  heading [id_ $ tocLabel ws] $ lineHTML ws
+  orgHTML' (succ depth) od
   where
     heading :: [Attribute] -> Html () -> Html ()
     heading as h = case depth of
@@ -112,6 +108,17 @@ blockHTML depth b = case b of
       4 -> h5_ as h
       5 -> h6_ as h
       _ -> h
+
+blockHTML :: Block -> Html ()
+blockHTML b = case b of
+  Quote t -> blockquote_ . p_ $ toHtml t
+  Example t -> pre_ [class_ "example"] $ toHtml t
+  Code l t -> div_ [class_ "org-src-container"]
+    $ pre_ [classes_ $ "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
+    $ toHtml t
+  List is -> listItemsHTML is
+  Table rw -> tableHTML rw
+  Paragraph ws -> p_ $ paragraphHTML ws
 
 paragraphHTML :: NonEmpty Words -> Html ()
 paragraphHTML (h :| t) = wordsHTML h <> para h t
