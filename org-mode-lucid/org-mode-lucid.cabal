@@ -22,7 +22,7 @@ common commons
 
   build-depends:
     , base      >=4.12 && <5
-    , hashable  >=1.2 && < 1.4
+    , hashable  >=1.2  && <1.4
     , lucid     ^>=2.9
     , org-mode  ^>=1.0
     , text
