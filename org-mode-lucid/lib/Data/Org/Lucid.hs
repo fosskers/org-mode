@@ -63,29 +63,27 @@ html o@(OrgFile m _) = html_ $ do
 --
 -- Does not wrap contents in a @<body>@ tag.
 body :: OrgFile -> Html ()
-body o@(OrgFile m od) = do
+body (OrgFile m od) = do
   maybe (pure ()) (h1_ [class_ "title"] . toHtml) $ metaTitle m
-  -- toc o
+  toc od
   orgHTML od
 
 -- | A unique identifier that can be used as an HTML @id@ attribute.
 tocLabel :: NonEmpty Words -> T.Text
 tocLabel ws = ("org" <>) . T.pack . take 6 . printf "%x" $ hash ws
 
--- headings :: [Org] -> [(Int, NonEmpty Words)]
--- headings = foldr f []
---   where
---     f :: Org -> [(Int, NonEmpty Words)] -> [(Int, NonEmpty Words)]
-    -- f = undefined  -- TODO Should be easy now!
-    -- f (Heading n ws) acc = (n, ws) : acc
-    -- f _ acc              = acc
+toc :: OrgDoc -> Html ()
+toc (OrgDoc _ []) = pure ()
+toc od            = h2_ "Table of Contents" *> toc' od
 
--- toc :: OrgFile -> Html ()
--- toc (OrgFile _ os) = case headings os of
---   [] -> pure ()
---   hs -> do
---     h2_ "Table of Contents"
---     ul_ $ traverse_ (\(_, ws) -> li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws) hs
+toc' :: OrgDoc -> Html ()
+toc' (OrgDoc _ []) = pure ()
+toc' (OrgDoc _ ss) = ul_ $ traverse_ f ss
+  where
+    f :: Section -> Html ()
+    f (Section ws od) = do
+      li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws
+      toc' od
 
 orgHTML :: OrgDoc -> Html ()
 orgHTML = orgHTML' 1
