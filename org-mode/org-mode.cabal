@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               org-mode
-version:            1.0.0
+version:            1.0.1
 description:        Parser for Emacs org-mode files.
 homepage:           https://github.com/fosskers/org-mode
 author:             Colin Woodbury
@@ -12,6 +12,8 @@ build-type:         Simple
 extra-source-files:
   README.md
   CHANGELOG.md
+  test/simple.org
+  test/test.org
 
 common commons
   default-language:   Haskell2010
