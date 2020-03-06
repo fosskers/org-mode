@@ -23,9 +23,8 @@ module Data.Org.Lucid
   ) where
 
 import           Control.Monad (when)
-import           Data.Foldable (fold, traverse_)
+import           Data.Foldable (traverse_)
 import           Data.Hashable (hash)
-import           Data.List (intersperse)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import           Data.Org
@@ -94,7 +93,7 @@ toc' t depth (OrgDoc _ ss)
   where
     f :: Section -> Html ()
     f (Section ws od) = do
-      li_ $ a_ [href_ $ "#" <> tocLabel ws] $ lineHTML ws
+      li_ $ a_ [href_ $ "#" <> tocLabel ws] $ paragraphHTML ws
       toc' t (succ depth) od
 
 orgHTML :: OrgStyle -> OrgDoc -> Html ()
@@ -107,7 +106,7 @@ orgHTML' os depth (OrgDoc bs ss) = do
 
 sectionHTML :: OrgStyle -> Int -> Section -> Html ()
 sectionHTML os depth (Section ws od) = do
-  heading [id_ $ tocLabel ws] $ lineHTML ws
+  heading [id_ $ tocLabel ws] $ paragraphHTML ws
   orgHTML' os (succ depth) od
   where
     heading :: [Attribute] -> Html () -> Html ()
@@ -142,15 +141,11 @@ paragraphHTML (h :| t) = wordsHTML h <> para h t
         Punct _   -> wordsHTML w <> para w ws
         _         -> " " <> wordsHTML w <> para w ws
 
--- | Render a grouping of `Words` that you expect to appear on a single line.
-lineHTML :: NonEmpty Words -> Html ()
-lineHTML = fold . intersperse " " . map wordsHTML . NEL.toList
-
 listItemsHTML :: ListItems -> Html ()
 listItemsHTML (ListItems is) = ul_ [class_ "org-ul"] $ traverse_ f is
   where
     f :: Item -> Html ()
-    f (Item ws next) = li_ $ lineHTML ws >> maybe (pure ()) listItemsHTML next
+    f (Item ws next) = li_ $ paragraphHTML ws >> traverse_ listItemsHTML next
 
 tableHTML :: OrgStyle -> NonEmpty Row -> Html ()
 tableHTML os rs = table_ tblClasses $ do
@@ -165,7 +160,7 @@ tableHTML os rs = table_ tblClasses $ do
       | bootstrap os = [class_ "thead-dark"]
       | otherwise = []
 
-    toprow = tr_ $ maybe (pure ()) (traverse_ g) h
+    toprow = tr_ $ traverse_ (traverse_ g) h
     (h, rest) = j $ NEL.toList rs
 
     -- | Restructure the input such that the first `Row` is not a `Break`.
@@ -182,12 +177,12 @@ tableHTML os rs = table_ tblClasses $ do
     -- | Render a header row.
     g :: Column -> Html ()
     g Empty       = th_ [scope_ "col"] ""
-    g (Column ws) = th_ [scope_ "col"] $ lineHTML ws
+    g (Column ws) = th_ [scope_ "col"] $ paragraphHTML ws
 
     -- | Render a normal row.
     k :: Column -> Html ()
     k Empty       = td_ ""
-    k (Column ws) = td_ $ lineHTML ws
+    k (Column ws) = td_ $ paragraphHTML ws
 
 wordsHTML :: Words -> Html ()
 wordsHTML ws = case ws of

@@ -54,6 +54,26 @@ Things to do:
   - Watch video
 - Water the cat
 
+* List with Parens
+
+This is a paragraph (or is it?). There's only one way to know.
+I think (*we should* be bold *about*) our decisions.
+
+- Here is an item
+- This (is an item too).
+- This (is an item)
+- This (*A* is)
+- This (*A* is) a cat
+- This (*A* yes *B*), why?
+
+* List from About page
+
+- The [[https://github.com/fosskers/aura][Aura Package Manager]] for Arch Linux
+- The [[https://github.com/kadena-io/chainweb-node][Kadena Public Blockchain]] (core developer)
+- [[https://github.com/fosskers/mapalgebra][MapAlgebra]]  - An implementation of /GIS and Cartographic Modelling/ by Dana Tomlin
+- Mapbox VectorTile codecs ([[https://github.com/fosskers/vectortiles][Haskell]], [[https://github.com/locationtech/geotrellis/tree/master/vectortile][Scala]])
+- [[https://github.com/fosskers/scalaz-and-cats][ScalaZ and Cats Comparison]] and the [[https://github.com/fosskers/scala-benchmarks][Scala Collections Benchmarks]]
+
 * Some Tables
 
 | A | B | C |

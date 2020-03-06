@@ -134,6 +134,13 @@ suite simple full = testGroup "Unit Tests"
       $ testPretty list "List" "- A\n  B\n- C"
       $ List (ListItems [Item [Plain "A", Plain "B"] Nothing, Item [Plain "C"] Nothing])
 
+    , testCase "List - Special Parens"
+      $ testPretty list "List" "- The [[https://github.com/kadena-io/chainweb-node][A]] (core developer)\n- B"
+      $ List (ListItems
+              [ Item [Plain "The", Link (URL "https://github.com/kadena-io/chainweb-node") (Just "A"), Punct '(', Plain "core", Plain "developer)"] Nothing
+              , Item [Plain "B"] Nothing ]
+             )
+
     , testCase "Table - One Row"
       $ testPretty table "Table" "| A | B | C |"
       $ Table [Row [Column [Plain "A"], Column [Plain "B"], Column [Plain "C"]]]
