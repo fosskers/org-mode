@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               org-mode-lucid
-version:            1.0.0
+version:            1.0.1
 description:        Lucid integration for org-mode.
 homepage:           https://github.com/fosskers/org-mode
 author:             Colin Woodbury
