@@ -20,6 +20,8 @@ module Data.Org.Lucid
   , OrgStyle(..)
   , defaultStyle
   , TOC(..)
+  , Highlighting
+  , codeHTML
   ) where
 
 import           Control.Monad (when)
@@ -45,6 +47,8 @@ data OrgStyle = OrgStyle
     -- depth is configurable.
   , bootstrap       :: Bool
     -- ^ Whether to add Twitter Bootstrap classes to certain elements.
+  , highlighting    :: Highlighting
+    -- ^ A function to give @\<code\>@ blocks syntax highlighting.
   }
 
 -- | Options for rendering a Table of Contents in the document.
@@ -55,11 +59,14 @@ data TOC = TOC
     -- ^ The number of levels to give the TOC.
   }
 
+-- | A function to give @\<code\>@ blocks syntax highlighting.
+type Highlighting = Maybe Language -> T.Text -> Html ()
+
 -- | Include the title and 3-level TOC named @Table of Contents@, and don't
 -- include Twitter Bootstrap classes. This mirrors the behaviour of Emacs'
 -- native HTML export functionality.
 defaultStyle :: OrgStyle
-defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) False
+defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) False codeHTML
 
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
 html :: OrgStyle -> OrgFile -> Html ()
@@ -120,14 +127,18 @@ sectionHTML os depth (Section ws od) = do
 
 blockHTML :: OrgStyle -> Block -> Html ()
 blockHTML os b = case b of
-  Quote t -> blockquote_ . p_ $ toHtml t
-  Example t -> pre_ [class_ "example"] $ toHtml t
-  Code l t -> div_ [class_ "org-src-container"]
-    $ pre_ [classes_ $ "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
-    $ toHtml t
-  List is -> listItemsHTML is
-  Table rw -> tableHTML os rw
+  Quote t      -> blockquote_ . p_ $ toHtml t
+  Example t    -> pre_ [class_ "example"] $ toHtml t
+  Code l t     -> highlighting os l t
+  List is      -> listItemsHTML is
+  Table rw     -> tableHTML os rw
   Paragraph ws -> p_ $ paragraphHTML ws
+
+-- | Mimicks the functionality of Emacs' native HTML export.
+codeHTML :: Highlighting
+codeHTML l t = div_ [class_ "org-src-container"]
+  $ pre_ [classes_ $ "src" : maybe [] (\(Language l') -> ["src-" <> l']) l]
+  $ toHtml t
 
 paragraphHTML :: NonEmpty Words -> Html ()
 paragraphHTML (h :| t) = wordsHTML h <> para h t
