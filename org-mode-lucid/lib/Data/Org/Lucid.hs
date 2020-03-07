@@ -199,7 +199,7 @@ wordsHTML :: Words -> Html ()
 wordsHTML ws = case ws of
   Bold t          -> b_ $ toHtml t
   Italic t        -> i_ $ toHtml t
-  Highlight t     -> code_ $ toHtml t
+  Highlight t     -> code_ [class_ "org-highlight"] $ toHtml t
   Underline t     -> span_ [style_ "text-decoration: underline;"] $ toHtml t
   Verbatim t      -> toHtml t
   Strike t        -> span_ [style_ "text-decoration: line-through;"] $ toHtml t
