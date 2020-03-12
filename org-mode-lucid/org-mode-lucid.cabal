@@ -23,10 +23,11 @@ common commons
     -Wincomplete-uni-patterns -Widentities
 
   build-depends:
-    , base      >=4.12 && <5
-    , hashable  >=1.2  && <1.4
-    , lucid     ^>=2.9
-    , org-mode  ^>=1.0
+    , base        >=4.12 && <5
+    , containers  >=0.6
+    , hashable    >=1.2  && <1.4
+    , lucid       ^>=2.9
+    , org-mode    ^>=1.0
     , text
 
 library

@@ -201,18 +201,15 @@ orgFile :: Parser OrgFile
 orgFile = space *> L.lexeme space (OrgFile <$> metaP <*> orgP) <* eof
 
 metaP :: Parser (M.Map Text Text)
-metaP = L.lexeme space $ undefined -- Meta
-  -- <$> optional (string "#+TITLE: "     *> someTillEnd <* space)
-  -- <*> optional (string "#+DATE: "      *> date        <* space)
-  -- <*> optional (string "#+AUTHOR: "    *> someTillEnd <* space)
-  -- <*> optional (string "#+HTML_HEAD: " *> someTillEnd <* space)
-  -- <*> optional (string "#+OPTIONS: "   *> someTillEnd <* space)
-  -- where
-  --   date :: Parser Day
-  --   date = fromGregorian
-  --     <$> (L.decimal <* char '-')
-  --     <*> (L.decimal <* char '-')
-  --     <*> L.decimal
+metaP = L.lexeme space $ M.fromList <$> keyword `sepEndBy` newline
+  where
+    keyword :: Parser (Text, Text)
+    keyword = do
+      void $ string "#+"
+      key <- someTill' ':'
+      void $ string ": "
+      val <- someTillEnd
+      pure (key, val)
 
 orgP :: Parser OrgDoc
 orgP = orgP' 1

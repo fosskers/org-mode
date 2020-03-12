@@ -28,7 +28,6 @@ common commons
     , base        >=4.12 && <5
     , megaparsec  >=7    && <9
     , text
-    , time        >=1.8  && <1.10
 
 library
   import:          commons
