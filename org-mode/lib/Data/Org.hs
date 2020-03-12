@@ -33,7 +33,7 @@ module Data.Org
     -- ** Internal Parsers
     -- | These are exposed for testing purposes.
   , orgFile
-  , metaP
+  , meta
   , orgP
   , section
   , paragraph
@@ -198,10 +198,10 @@ org = parseMaybe orgFile
 type Parser = Parsec Void Text
 
 orgFile :: Parser OrgFile
-orgFile = space *> L.lexeme space (OrgFile <$> metaP <*> orgP) <* eof
+orgFile = space *> L.lexeme space (OrgFile <$> meta <*> orgP) <* eof
 
-metaP :: Parser (M.Map Text Text)
-metaP = L.lexeme space $ M.fromList <$> keyword `sepEndBy` newline
+meta :: Parser (M.Map Text Text)
+meta = L.lexeme space $ M.fromList <$> keyword `sepEndBy` newline
   where
     keyword :: Parser (Text, Text)
     keyword = do

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### Fixed
+
+- Support for `org-mode-1.1`.
+
 ## 1.1.0 (2020-03-07)
 
 #### Changed

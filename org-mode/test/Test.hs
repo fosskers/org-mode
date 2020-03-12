@@ -161,10 +161,10 @@ suite simple full = testGroup "Unit Tests"
       $ Table [Row [Column [Plain "A"], Empty, Column [Plain "C"]]]
 
     , testCase "Meta - Title"
-      $ testPretty metaP "Meta" "#+TITLE: Test"
+      $ testPretty meta "Meta" "#+TITLE: Test"
       [("TITLE", "Test")]
     , testCase "Meta - Full"
-      $ testPretty metaP "Meta" "#+TITLE: Test\n#+DATE: 2020-02-17\n#+AUTHOR: Colin"
+      $ testPretty meta "Meta" "#+TITLE: Test\n#+DATE: 2020-02-17\n#+AUTHOR: Colin"
       [("TITLE", "Test"), ("DATE", "2020-02-17"), ("AUTHOR", "Colin")]
     ]
   , testGroup "Pretty Printing"
