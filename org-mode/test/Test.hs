@@ -7,7 +7,6 @@ import           Data.Org
 import           Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import           Data.Time.Calendar (fromGregorian)
 import           Data.Void (Void)
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -160,12 +159,13 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Table - Empty Column"
       $ testPretty table "Table" "| A | | C |"
       $ Table [Row [Column [Plain "A"], Empty, Column [Plain "C"]]]
+
     , testCase "Meta - Title"
-      $ testPretty meta "Meta" "#+TITLE: Test"
-      $ Meta (Just "Test") Nothing Nothing Nothing Nothing
+      $ testPretty metaP "Meta" "#+TITLE: Test"
+      $ [("TITLE", "Test")]
     , testCase "Meta - Full"
-      $ testPretty meta "Meta" "#+TITLE: Test\n#+DATE: 2020-02-17\n#+AUTHOR: Colin"
-      $ Meta (Just "Test") (Just $ fromGregorian 2020 2 17) (Just "Colin") Nothing Nothing
+      $ testPretty metaP "Meta" "#+TITLE: Test\n#+DATE: 2020-02-17\n#+AUTHOR: Colin"
+      $ [("TITLE", "Test"), ("DATE", "2020-02-17"), ("AUTHOR", "Colin")]
     ]
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do

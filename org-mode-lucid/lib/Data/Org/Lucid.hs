@@ -29,6 +29,7 @@ import           Data.Foldable (traverse_)
 import           Data.Hashable (hash)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
+import qualified Data.Map.Strict as M
 import           Data.Org
 import qualified Data.Text as T
 import           Lucid
@@ -71,7 +72,7 @@ defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) False codeHTML
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
 html :: OrgStyle -> OrgFile -> Html ()
 html os o@(OrgFile m _) = html_ $ do
-  head_ $ title_ (maybe "" toHtml $ metaTitle m)
+  head_ $ title_ (maybe "" toHtml $ M.lookup "TITLE" m)
   body_ $ body os o
 
 -- | Convert a parsed `OrgFile` into the body of an HTML document, so that it
@@ -80,7 +81,7 @@ html os o@(OrgFile m _) = html_ $ do
 -- Does __not__ wrap contents in a @\<body\>@ tag.
 body :: OrgStyle -> OrgFile -> Html ()
 body os (OrgFile m od) = do
-  when (includeTitle os) $ traverse_ (h1_ [class_ "title"] . toHtml) $ metaTitle m
+  when (includeTitle os) . traverse_ (h1_ [class_ "title"] . toHtml) $ M.lookup "TITLE" m
   traverse_ (`toc` od) $ tableOfContents os
   orgHTML os od
 

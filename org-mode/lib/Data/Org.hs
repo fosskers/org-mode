@@ -17,8 +17,6 @@ module Data.Org
   ( -- * Types
     OrgFile(..)
   , emptyOrgFile
-  , Meta(..)
-  , emptyMeta
   , OrgDoc(..)
   , emptyDoc
   , Section(..)
@@ -35,7 +33,7 @@ module Data.Org
     -- ** Internal Parsers
     -- | These are exposed for testing purposes.
   , orgFile
-  , meta
+  , metaP
   , orgP
   , section
   , paragraph
@@ -54,47 +52,35 @@ import           Data.Functor (($>))
 import           Data.Hashable (Hashable(..))
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
+import qualified Data.Map.Strict as M
 import           Data.Semigroup (sconcat)
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time.Calendar (Day, fromGregorian, toGregorian)
 import           Data.Void (Void)
 import           GHC.Generics (Generic)
 import           System.FilePath (takeExtension)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
-import           Text.Printf (printf)
 
 --------------------------------------------------------------------------------
 -- Types
 
 -- | A complete @.org@ file with metadata.
 data OrgFile = OrgFile
-  { orgMeta :: Meta
+  { orgMeta :: M.Map Text Text
+  -- ^ Top-level fields like:
+  --
+  -- @
+  -- #+TITLE: Curing Cancer with Haskell
+  -- #+DATE: 2020-02-25
+  -- #+AUTHOR: Colin
+  -- @
   , orgDoc  :: OrgDoc }
   deriving stock (Eq, Show, Generic)
 
 emptyOrgFile :: OrgFile
-emptyOrgFile = OrgFile emptyMeta emptyDoc
-
--- | Top-level fields like:
---
--- @
--- #+TITLE: Curing Cancer with Haskell
--- #+DATE: 2020-02-25
--- #+AUTHOR: Colin
--- @
-data Meta = Meta
-  { metaTitle    :: Maybe Text
-  , metaDate     :: Maybe Day
-  , metaAuthor   :: Maybe Text
-  , metaHtmlHead :: Maybe Text
-  , metaOptions  :: Maybe Text }
-  deriving stock (Eq, Show, Generic)
-
-emptyMeta :: Meta
-emptyMeta = Meta Nothing Nothing Nothing Nothing Nothing
+emptyOrgFile = OrgFile mempty emptyDoc
 
 -- | A recursive Org document. These are zero or more blocks of markup, followed
 -- by zero or more subsections.
@@ -212,21 +198,21 @@ org = parseMaybe orgFile
 type Parser = Parsec Void Text
 
 orgFile :: Parser OrgFile
-orgFile = space *> L.lexeme space (OrgFile <$> meta <*> orgP) <* eof
+orgFile = space *> L.lexeme space (OrgFile <$> metaP <*> orgP) <* eof
 
-meta :: Parser Meta
-meta = L.lexeme space $ Meta
-  <$> optional (string "#+TITLE: "     *> someTillEnd <* space)
-  <*> optional (string "#+DATE: "      *> date        <* space)
-  <*> optional (string "#+AUTHOR: "    *> someTillEnd <* space)
-  <*> optional (string "#+HTML_HEAD: " *> someTillEnd <* space)
-  <*> optional (string "#+OPTIONS: "   *> someTillEnd <* space)
-  where
-    date :: Parser Day
-    date = fromGregorian
-      <$> (L.decimal <* char '-')
-      <*> (L.decimal <* char '-')
-      <*> L.decimal
+metaP :: Parser (M.Map Text Text)
+metaP = L.lexeme space $ undefined -- Meta
+  -- <$> optional (string "#+TITLE: "     *> someTillEnd <* space)
+  -- <*> optional (string "#+DATE: "      *> date        <* space)
+  -- <*> optional (string "#+AUTHOR: "    *> someTillEnd <* space)
+  -- <*> optional (string "#+HTML_HEAD: " *> someTillEnd <* space)
+  -- <*> optional (string "#+OPTIONS: "   *> someTillEnd <* space)
+  -- where
+  --   date :: Parser Day
+  --   date = fromGregorian
+  --     <$> (L.decimal <* char '-')
+  --     <*> (L.decimal <* char '-')
+  --     <*> L.decimal
 
 orgP :: Parser OrgDoc
 orgP = orgP' 1
@@ -409,15 +395,9 @@ manyOf c = takeWhileP (Just $ "many of " <> [c]) (== c)
 prettyOrgFile :: OrgFile -> Text
 prettyOrgFile (OrgFile m os) = metas <> "\n\n" <> prettyOrg os
   where
-    metas = T.intercalate "\n" $
-      maybe [] (\t -> ["#+TITLE: " <> t]) (metaTitle m)
-      <> maybe [] (pure . T.pack . day) (metaDate m)
-      <> maybe [] (\a -> ["#+AUTHOR: " <> a]) (metaAuthor m)
-      <> maybe [] (\h -> ["#+HTML_HEAD: " <> h]) (metaHtmlHead m)
-
-    day :: Day -> String
-    day d = case toGregorian d of
-      (yr, mn, dy) -> printf "#+DATE: %d-%02d-%02d" yr mn dy
+    metas = T.intercalate "\n"
+      $ map (\(l, t) -> "#+" <> l <> ": " <> t)
+      $ M.toList m
 
 prettyOrg :: OrgDoc -> Text
 prettyOrg  = prettyOrg' 1

@@ -35,6 +35,7 @@ library
   hs-source-dirs:  lib
   exposed-modules: Data.Org
   build-depends:
+    , containers          >=0.6
     , filepath
     , hashable            >=1.2 && <1.4
     , parser-combinators  >=1.1 && <1.3
