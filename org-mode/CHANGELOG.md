@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+#### Added
+
+- Support for heading tags, like `:foo:`.
+
 #### Changed
 
 - `OrgFile` now contains a raw `Map Text Text` for all metadata key-value pairs.
