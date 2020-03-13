@@ -43,6 +43,12 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Header - Tags"
       $ testPretty orgP "Header" "* A  :this:that:"
       $ OrgDoc [] [Section [Plain "A"] ["this", "that"] emptyDoc]
+    , testCase "Header - More Tags"
+      $ testPretty orgP "Header" "* A  :this:that:\n** B   :other:\n* C"
+      $ OrgDoc []
+      [ Section [Plain "A"] ["this", "that"] (OrgDoc [] [Section [Plain "B"] ["other"] emptyDoc])
+      , Section [Plain "C"] [] emptyDoc
+      ]
 
     , testCase "Bold" $ parseMaybe orgP "*Bold*"
       @?= Just (OrgDoc [Paragraph [Bold "Bold"]] [])
