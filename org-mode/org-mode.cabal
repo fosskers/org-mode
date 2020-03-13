@@ -23,6 +23,7 @@ common commons
   ghc-options:
     -Wall -Wpartial-fields -Wincomplete-record-updates
     -Wincomplete-uni-patterns -Widentities
+    -funclutter-valid-hole-fits
 
   build-depends:
     , base        >=4.12 && <5

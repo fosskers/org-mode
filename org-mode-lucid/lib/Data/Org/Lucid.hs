@@ -100,7 +100,7 @@ toc' t depth (OrgDoc _ ss)
   | otherwise = ul_ $ traverse_ f ss
   where
     f :: Section -> Html ()
-    f (Section ws od) = do
+    f (Section ws _ od) = do
       li_ $ a_ [href_ $ "#" <> tocLabel ws] $ paragraphHTML ws
       toc' t (succ depth) od
 
@@ -113,7 +113,7 @@ orgHTML' os depth (OrgDoc bs ss) = do
   traverse_ (sectionHTML os depth) ss
 
 sectionHTML :: OrgStyle -> Int -> Section -> Html ()
-sectionHTML os depth (Section ws od) = do
+sectionHTML os depth (Section ws _ od) = do
   heading [id_ $ tocLabel ws] $ paragraphHTML ws
   orgHTML' os (succ depth) od
   where
@@ -206,5 +206,6 @@ wordsHTML ws = case ws of
   Strike t        -> span_ [style_ "text-decoration: line-through;"] $ toHtml t
   Link (URL u) mt -> a_ [href_ u] $ maybe "" toHtml mt
   Image (URL u)   -> img_ [src_ u]
+  Tags ts         -> toHtml $ ":" <> T.intercalate ":" (NEL.toList ts) <> ":"
   Punct c         -> toHtml $ T.singleton c
   Plain t         -> toHtml t

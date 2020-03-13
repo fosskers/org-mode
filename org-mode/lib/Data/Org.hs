@@ -48,6 +48,7 @@ module Data.Org
 
 import           Control.Applicative.Combinators.NonEmpty
 import           Control.Monad (void, when)
+import           Data.Bool (bool)
 import           Data.Functor (($>))
 import           Data.Hashable (Hashable(..))
 import           Data.List.NonEmpty (NonEmpty(..))
@@ -122,6 +123,7 @@ data Block
 -- @
 data Section = Section
   { sectionHeading :: NonEmpty Words
+  , sectionTags    :: [Text]
   , sectionDoc     :: OrgDoc }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
@@ -173,6 +175,7 @@ data Words
   | Strike Text
   | Link URL (Maybe Text)
   | Image URL
+  | Tags (NonEmpty Text)
   | Punct Char
   | Plain Text
   deriving stock (Eq, Show, Generic)
@@ -229,19 +232,22 @@ orgP' depth = L.lexeme space $ OrgDoc
       , paragraph ]  -- TODO Paragraph needs to fail if it detects a heading.
 
 -- | If a line stars with @*@ and a space, it is a `Section` heading.
-heading :: Parser (T.Text, NonEmpty Words)
-heading = (,)
-  <$> someOf '*' <* char ' '
-  <*> line '\n'
+heading :: Parser (T.Text, NonEmpty Words, [Text])
+heading = do
+  stars <- someOf '*' <* char ' '
+  ws <- line '\n'
+  case nelUnsnoc ws of
+    (Tags ts, Just rest) -> pure (stars, rest, NEL.toList ts)
+    _                    -> pure (stars, ws, [])
 
 section :: Int -> Parser Section
 section depth = L.lexeme space $ do
-  (stars, ws) <- heading
+  (stars, ws, ts) <- heading
   -- Fail if we've found a parent heading --
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
   void space
-  Section ws <$> orgP' (succ depth)
+  Section ws ts <$> orgP' (succ depth)
 
 quote :: Parser Block
 quote = L.lexeme space $ do
@@ -348,6 +354,7 @@ wordChunk end = choice
   , try $ Strike    <$> between (char '+') (char '+') (someTill' '+') <* pOrS
   , try image
   , try link
+  , try tags
   , try $ Punct     <$> oneOf punc
   , Plain           <$> takeWhile1P (Just "plain text") (\c -> c /= ' ' && c /= end) ]
   where
@@ -356,6 +363,11 @@ wordChunk end = choice
 
 punc :: String
 punc = ".,!?():;'"
+
+tags :: Parser Words
+tags = do
+  void $ char ':'
+  Tags <$> (T.pack . NEL.toList <$> some letterChar) `sepEndBy1` char ':'
 
 image :: Parser Words
 image = between (char '[') (char ']') $
@@ -404,9 +416,15 @@ prettyOrg' depth (OrgDoc bs ss) =
   T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
 
 prettySection :: Int -> Section -> Text
-prettySection depth (Section ws od) = headig <> "\n\n" <> subdoc
+prettySection depth (Section ws ts od) = headig <> "\n\n" <> subdoc
   where
-    headig = T.unwords $ T.replicate depth "*" : NEL.toList (NEL.map prettyWords ws)
+    -- TODO There is likely a punctuation bug here.
+    headig = T.unwords
+      $ T.replicate depth "*"
+      : NEL.toList (NEL.map prettyWords ws)
+      <> bool [":" <> T.intercalate ":" ts <> ":"] [] (null ts)
+
+    subdoc :: Text
     subdoc = prettyOrg' (succ depth) od
 
 prettyBlock :: Block -> Text
@@ -461,5 +479,9 @@ prettyWords w = case w of
   Link (URL url) Nothing  -> "[[" <> url <> "]]"
   Link (URL url) (Just t) -> "[[" <> url <> "][" <> t <> "]]"
   Image (URL url)         -> "[[" <> url <> "]]"
+  Tags ts                 ->  ":" <> T.intercalate ":" (NEL.toList ts) <> ":"
   Punct c                 -> T.singleton c
   Plain t                 -> t
+
+nelUnsnoc :: NonEmpty a -> (a, Maybe (NonEmpty a))
+nelUnsnoc ne = (NEL.last ne, NEL.nonEmpty $ NEL.init ne)

@@ -28,18 +28,21 @@ suite :: T.Text -> T.Text -> TestTree
 suite simple full = testGroup "Unit Tests"
   [ testGroup "Basic Markup"
     [ testCase "Header" $ parseMaybe (section 1) "* A"
-      @?= Just (Section [Plain "A"] emptyDoc)
+      @?= Just (Section [Plain "A"] [] emptyDoc)
     , testCase "Header - Subsection" $ parseMaybe (section 1) "* A\n** B"
-      @?= Just (Section [Plain "A"] (OrgDoc [] [Section [Plain "B"] emptyDoc]))
+      @?= Just (Section [Plain "A"] [] (OrgDoc [] [Section [Plain "B"] [] emptyDoc]))
     , testCase "Header - Back again"
       $ testPretty orgP "Header" "* A\n** B\n* C"
-      $ OrgDoc [] [ Section [Plain "A"] (OrgDoc [] [Section [Plain "B"] emptyDoc])
-                  , Section [Plain "C"] emptyDoc ]
+      $ OrgDoc [] [ Section [Plain "A"] [] (OrgDoc [] [Section [Plain "B"] [] emptyDoc])
+                  , Section [Plain "C"] [] emptyDoc ]
     , testCase "Header - Contents"
       $ testPretty orgP "Header" "* A\nD\n\n** B\n* C"  -- TODO Requires an extra newline!
       $ OrgDoc []
-      [ Section [Plain "A"] (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] emptyDoc])
-      , Section [Plain "C"] emptyDoc ]
+      [ Section [Plain "A"] [] (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] [] emptyDoc])
+      , Section [Plain "C"] [] emptyDoc ]
+    , testCase "Header - Tags"
+      $ testPretty orgP "Header" "* A  :this:that:"
+      $ OrgDoc [] [Section [Plain "A"] ["this", "that"] emptyDoc]
 
     , testCase "Bold" $ parseMaybe orgP "*Bold*"
       @?= Just (OrgDoc [Paragraph [Bold "Bold"]] [])
