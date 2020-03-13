@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 (2020-03-13)
+
+If you're reading this from the future, everyone is being silly about the Corona
+Virus right now.
 
 #### Added
 
