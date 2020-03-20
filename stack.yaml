@@ -1,6 +1,6 @@
 resolver: lts-15.4
 
-ghc-options: {"$locals": -ddump-to-file -ddump-hi}
+ghc-options: {"$locals": -fwrite-ide-info -fmax-relevant-binds=0}
 
 packages:
   - org-mode

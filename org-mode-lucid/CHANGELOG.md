@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+#### Changed
+
+- `OrgStyle` has been given an extra field, `separator` for defining what should
+  appear between adjacent elements (e.g. spaces between words).
+- `defaultStyle` has been updated to reflect the above.
+
 ## 1.1.1 (2020-03-13)
 
 #### Fixed
