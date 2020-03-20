@@ -3,3 +3,4 @@ org-mode-lucid/.stack-work/*
 org-mode/.stack-work/*
 *~
 *.dump-hi
+*.hie
