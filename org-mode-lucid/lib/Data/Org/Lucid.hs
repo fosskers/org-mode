@@ -40,20 +40,22 @@ import           Text.Printf (printf)
 
 -- | Rendering options.
 data OrgStyle = OrgStyle
-  { includeTitle    :: Bool
+  { includeTitle      :: Bool
     -- ^ Whether to include the @#+TITLE: ...@ value as an @<h1>@ tag at the top
     -- of the document.
-  , tableOfContents :: Maybe TOC
+  , tableOfContents   :: Maybe TOC
     -- ^ Optionally include a Table of Contents after the title. The displayed
     -- depth is configurable.
-  , bootstrap       :: Bool
+  , bootstrap         :: Bool
     -- ^ Whether to add Twitter Bootstrap classes to certain elements.
-  , highlighting    :: Highlighting
+  , highlighting      :: Highlighting
     -- ^ A function to give @\<code\>@ blocks syntax highlighting.
-  , separator       :: Maybe Char
+  , separator         :: Maybe Char
     -- ^ `Char` to insert between elements during rendering, for example having
     -- a space between words. Asian languages, for instance, might want this to
     -- be `Nothing`.
+  , hrBetweenSections :: Bool
+    -- ^ Whether to insert an @\<hr\>@ element between top-level sections.
   }
 
 -- | Options for rendering a Table of Contents in the document.
@@ -67,11 +69,19 @@ data TOC = TOC
 -- | A function to give @\<code\>@ blocks syntax highlighting.
 type Highlighting = Maybe Language -> T.Text -> Html ()
 
--- | Include the title and 3-level TOC named @Table of Contents@, and don't
--- include Twitter Bootstrap classes. This mirrors the behaviour of Emacs'
--- native HTML export functionality.
+-- | Include the title and 3-level TOC named @Table of Contents@, don't include
+-- Twitter Bootstrap classes, use no custom syntax highlighting, separate words
+-- with a whitespace character, and don't insert an @\<hr\>@ between major
+-- sections. This mirrors the behaviour of Emacs' native HTML export
+-- functionality.
 defaultStyle :: OrgStyle
-defaultStyle = OrgStyle True (Just $ TOC "Table of Contents" 3) False codeHTML (Just ' ')
+defaultStyle = OrgStyle
+  { includeTitle = True
+  , tableOfContents = Just $ TOC "Table of Contents" 3
+  , bootstrap = False
+  , highlighting = codeHTML
+  , separator = Just ' '
+  , hrBetweenSections = False }
 
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
 html :: OrgStyle -> OrgFile -> Html ()
@@ -120,6 +130,7 @@ sectionHTML :: OrgStyle -> Int -> Section -> Html ()
 sectionHTML os depth (Section ws _ od) = do
   heading [id_ $ tocLabel ws] $ paragraphHTML os ws
   orgHTML' os (succ depth) od
+  when (hrBetweenSections os && depth == 1) $ hr_ []
   where
     heading :: [Attribute] -> Html () -> Html ()
     heading as h = case depth of
