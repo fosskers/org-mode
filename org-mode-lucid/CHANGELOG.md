@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 (2020-03-24)
+
+#### Changed
+
+- `OrgStyle` has been given an extra field, `hrBetweenSections :: Bool`. If
+  `True`, rendering will add a `<hr>` between top-level sections.
+- `defaultStyle` has been updated to reflect the above.
+
 ## 1.2.0 (2020-03-19)
 
 #### Changed
