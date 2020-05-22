@@ -4,3 +4,4 @@ org-mode/.stack-work/*
 *~
 *.dump-hi
 *.hie
+stack.yaml.lock
