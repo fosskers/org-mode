@@ -19,10 +19,10 @@ jobs:
         uses: mstksg/setup-stack@v2
 
       - name: Clone project
-        uses: actions/checkout@v2.1.1
+        uses: actions/checkout@v2.2.0
 
       - name: Cache dependencies
-        uses: actions/cache@v1.2.0
+        uses: actions/cache@v2.0.0
         with:
           path: ~/.stack
           key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml') }}
