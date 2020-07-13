@@ -41,23 +41,21 @@ import           Text.Printf (printf)
 
 -- | Rendering options.
 data OrgStyle = OrgStyle
-  { includeTitle      :: Bool
+  { includeTitle    :: Bool
     -- ^ Whether to include the @#+TITLE: ...@ value as an @<h1>@ tag at the top
     -- of the document.
-  , tableOfContents   :: Maybe TOC
+  , tableOfContents :: Maybe TOC
     -- ^ Optionally include a Table of Contents after the title. The displayed
     -- depth is configurable.
-  , bootstrap         :: Bool
+  , bootstrap       :: Bool
     -- ^ Whether to add Twitter Bootstrap classes to certain elements.
-  , highlighting      :: Highlighting
+  , highlighting    :: Highlighting
     -- ^ A function to give @\<code\>@ blocks syntax highlighting.
-  , sectionStyling    :: SectionStyling
-  , separator         :: Maybe Char
+  , sectionStyling  :: SectionStyling
+  , separator       :: Maybe Char
     -- ^ `Char` to insert between elements during rendering, for example having
     -- a space between words. Asian languages, for instance, might want this to
     -- be `Nothing`.
-  , hrBetweenSections :: Bool
-    -- ^ Whether to insert an @\<hr\>@ element between top-level sections.
   }
 
 -- | Options for rendering a Table of Contents in the document.
@@ -87,8 +85,7 @@ defaultStyle = OrgStyle
   , bootstrap = False
   , highlighting = codeHTML
   , sectionStyling = \_ a b -> a >> b
-  , separator = Just ' '
-  , hrBetweenSections = False }
+  , separator = Just ' ' }
 
 -- | Convert a parsed `OrgFile` into a full HTML document readable in a browser.
 html :: OrgStyle -> OrgFile -> Html ()
@@ -135,9 +132,6 @@ orgHTML' os depth (OrgDoc bs ss) = do
 
 sectionHTML :: OrgStyle -> Int -> Section -> Html ()
 sectionHTML os depth (Section ws _ od) = sectionStyling os depth theHead theBody
-  -- heading [id_ $ tocLabel ws] $ paragraphHTML os ws
-  -- orgHTML' os (succ depth) od
-  -- when (hrBetweenSections os && depth == 1) $ hr_ []
   where
     theHead :: Html ()
     theHead = heading [id_ $ tocLabel ws] $ paragraphHTML os ws
