@@ -21,6 +21,7 @@ module Data.Org.Lucid
   , defaultStyle
   , TOC(..)
   , Highlighting
+  , SectionStyling
   , codeHTML
   ) where
 
@@ -50,6 +51,7 @@ data OrgStyle = OrgStyle
     -- ^ Whether to add Twitter Bootstrap classes to certain elements.
   , highlighting      :: Highlighting
     -- ^ A function to give @\<code\>@ blocks syntax highlighting.
+  , sectionStyling    :: SectionStyling
   , separator         :: Maybe Char
     -- ^ `Char` to insert between elements during rendering, for example having
     -- a space between words. Asian languages, for instance, might want this to
@@ -69,6 +71,10 @@ data TOC = TOC
 -- | A function to give @\<code\>@ blocks syntax highlighting.
 type Highlighting = Maybe Language -> T.Text -> Html ()
 
+-- | A post-processing function to apply to a `Section` to give it extra
+-- formatting. The `Int` is the header depth.
+type SectionStyling = Int -> Html () -> Html ()
+
 -- | Include the title and 3-level TOC named @Table of Contents@, don't include
 -- Twitter Bootstrap classes, use no custom syntax highlighting, separate words
 -- with a whitespace character, and don't insert an @\<hr\>@ between major
@@ -80,6 +86,7 @@ defaultStyle = OrgStyle
   , tableOfContents = Just $ TOC "Table of Contents" 3
   , bootstrap = False
   , highlighting = codeHTML
+  , sectionStyling = const id
   , separator = Just ' '
   , hrBetweenSections = False }
 
