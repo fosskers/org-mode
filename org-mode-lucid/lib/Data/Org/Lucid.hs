@@ -134,10 +134,10 @@ orgHTML' os depth (OrgDoc bs ss) = do
   traverse_ (sectionHTML os depth) ss
 
 sectionHTML :: OrgStyle -> Int -> Section -> Html ()
-sectionHTML os depth (Section ws _ od) = do
+sectionHTML os depth (Section ws _ od) = sectionStyling os depth $ do
   heading [id_ $ tocLabel ws] $ paragraphHTML os ws
   orgHTML' os (succ depth) od
-  when (hrBetweenSections os && depth == 1) $ hr_ []
+  -- when (hrBetweenSections os && depth == 1) $ hr_ []
   where
     heading :: [Attribute] -> Html () -> Html ()
     heading as h = case depth of
