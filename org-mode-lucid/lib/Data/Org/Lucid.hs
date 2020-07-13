@@ -73,7 +73,7 @@ type Highlighting = Maybe Language -> T.Text -> Html ()
 
 -- | A post-processing function to apply to a `Section` to give it extra
 -- formatting. The `Int` is the header depth.
-type SectionStyling = Int -> Html () -> Html ()
+type SectionStyling = Int -> Html () -> Html () -> Html ()
 
 -- | Include the title and 3-level TOC named @Table of Contents@, don't include
 -- Twitter Bootstrap classes, use no custom syntax highlighting, separate words
@@ -86,7 +86,7 @@ defaultStyle = OrgStyle
   , tableOfContents = Just $ TOC "Table of Contents" 3
   , bootstrap = False
   , highlighting = codeHTML
-  , sectionStyling = const id
+  , sectionStyling = \_ a b -> a >> b
   , separator = Just ' '
   , hrBetweenSections = False }
 
@@ -134,11 +134,17 @@ orgHTML' os depth (OrgDoc bs ss) = do
   traverse_ (sectionHTML os depth) ss
 
 sectionHTML :: OrgStyle -> Int -> Section -> Html ()
-sectionHTML os depth (Section ws _ od) = sectionStyling os depth $ do
-  heading [id_ $ tocLabel ws] $ paragraphHTML os ws
-  orgHTML' os (succ depth) od
+sectionHTML os depth (Section ws _ od) = sectionStyling os depth theHead theBody
+  -- heading [id_ $ tocLabel ws] $ paragraphHTML os ws
+  -- orgHTML' os (succ depth) od
   -- when (hrBetweenSections os && depth == 1) $ hr_ []
   where
+    theHead :: Html ()
+    theHead = heading [id_ $ tocLabel ws] $ paragraphHTML os ws
+
+    theBody :: Html ()
+    theBody = orgHTML' os (succ depth) od
+
     heading :: [Attribute] -> Html () -> Html ()
     heading as h = case depth of
       1 -> h2_ as h
