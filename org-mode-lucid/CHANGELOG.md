@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.4.0 (2020-07-13)
+
+#### Added
+
+- Headers and their contents can now be tweaked on the caller's end with the new
+  `OrgStyle` field `sectionStyling`.
+
+#### Removed
+
+- The `hrBetweenSections` function has been removed. The same effect can be
+  achieved with a custom `SectionStyling`:
+
+```haskell
+section :: O.SectionStyling
+section depth h b = do
+  h
+  b
+  when (depth == 1) $ hr_ []
+```
+
 ## 1.3.0 (2020-03-24)
 
 #### Changed
