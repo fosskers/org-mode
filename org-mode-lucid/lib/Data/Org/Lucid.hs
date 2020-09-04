@@ -16,6 +16,7 @@ module Data.Org.Lucid
     -- | Consider `defaultStyle` as the style to pass to these functions.
     html
   , body
+  , toc
     -- * Styling
   , OrgStyle(..)
   , defaultStyle
@@ -44,9 +45,9 @@ data OrgStyle = OrgStyle
   { includeTitle    :: Bool
     -- ^ Whether to include the @#+TITLE: ...@ value as an @<h1>@ tag at the top
     -- of the document.
-  , tableOfContents :: Maybe TOC
-    -- ^ Optionally include a Table of Contents after the title. The displayed
-    -- depth is configurable.
+  , tableOfContents :: TOC
+    -- ^ Settings for the generated Table of Contents. The displayed depth is
+    -- configurable.
   , bootstrap       :: Bool
     -- ^ Whether to add Twitter Bootstrap classes to certain elements.
   , highlighting    :: Highlighting
@@ -59,10 +60,8 @@ data OrgStyle = OrgStyle
   }
 
 -- | Options for rendering a Table of Contents in the document.
-data TOC = TOC
-  { tocTitle :: T.Text
-    -- ^ The text of the TOC to be rendered in an @<h2>@ element.
-  , tocDepth :: Word
+newtype TOC = TOC
+  { tocDepth :: Word
     -- ^ The number of levels to give the TOC.
   }
 
@@ -81,7 +80,7 @@ type SectionStyling = Int -> Html () -> Html () -> Html ()
 defaultStyle :: OrgStyle
 defaultStyle = OrgStyle
   { includeTitle = True
-  , tableOfContents = Just $ TOC "Table of Contents" 3
+  , tableOfContents = TOC 3
   , bootstrap = False
   , highlighting = codeHTML
   , sectionStyling = \_ a b -> a >> b
@@ -100,16 +99,16 @@ html os o@(OrgFile m _) = html_ $ do
 body :: OrgStyle -> OrgFile -> Html ()
 body os (OrgFile m od) = do
   when (includeTitle os) . traverse_ (h1_ [class_ "title"] . toHtml) $ M.lookup "TITLE" m
-  traverse_ (\t -> toc os t od) $ tableOfContents os
   orgHTML os od
 
 -- | A unique identifier that can be used as an HTML @id@ attribute.
 tocLabel :: NonEmpty Words -> T.Text
 tocLabel = ("org" <>) . T.pack . take 6 . printf "%x" . hash
 
-toc :: OrgStyle -> TOC -> OrgDoc -> Html ()
-toc _ _ (OrgDoc _ []) = pure ()
-toc os t od           = h2_ (toHtml $ tocTitle t) *> toc' os t 1 od
+-- | Generate a Table of Contents that matches some `Html` produced by `html` or
+-- `body`.
+toc :: OrgStyle -> OrgFile -> Html ()
+toc os (OrgFile _ od) = toc' os (tableOfContents os) 1 od
 
 toc' :: OrgStyle -> TOC -> Word -> OrgDoc -> Html ()
 toc' _ _ _ (OrgDoc _ []) = pure ()
