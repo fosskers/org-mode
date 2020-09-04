@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.5.0 (2020-09-04)
+
+#### Added
+
+- `toc` function is now exposed for manually generating an article's associated
+  Table of Contents.
+
+#### Changed
+
+- Tables of Contents are no longer automatically injected into the `Html`
+  produced by the `html` and `body` functions.
+- The `tableOfContents` field of `OrgStyle` is no longer a `Maybe`. It must be
+  provided, but can be given any value if you don't intend to call `toc`
+  yourself.
+
+#### Removed
+
+- The `TOC` type had its `tocTitle :: Text` field removed.
+
 ## 1.4.0 (2020-07-13)
 
 #### Added
