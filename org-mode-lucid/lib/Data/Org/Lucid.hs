@@ -229,7 +229,7 @@ wordsHTML ws = case ws of
   Verbatim t      -> toHtml t
   Strike t        -> span_ [style_ "text-decoration: line-through;"] $ toHtml t
   Link (URL u) mt -> a_ [href_ u] $ maybe "" toHtml mt
-  Image (URL u)   -> img_ [src_ u]
+  Image (URL u)   -> figure_ $ img_ [src_ u]
   Tags ts         -> toHtml $ ":" <> T.intercalate ":" (NEL.toList ts) <> ":"
   Punct c         -> toHtml $ T.singleton c
   Plain t         -> toHtml t
