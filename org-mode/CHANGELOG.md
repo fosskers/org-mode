@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 (2021-04-04)
+
+#### Fixed
+
+- Widened `megaparsec` bounds.
+
 ## 1.1.0 (2020-03-13)
 
 If you're reading this from the future, everyone is being silly about the Corona
