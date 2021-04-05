@@ -50,6 +50,8 @@ data OrgStyle = OrgStyle
     -- configurable.
   , bootstrap       :: Bool
     -- ^ Whether to add Twitter Bootstrap classes to certain elements.
+  , bulma           :: Bool
+    -- ^ Whether to add Bulma classes to certain elements.
   , highlighting    :: Highlighting
     -- ^ A function to give @\<code\>@ blocks syntax highlighting.
   , sectionStyling  :: SectionStyling
@@ -82,6 +84,7 @@ defaultStyle = OrgStyle
   { includeTitle = True
   , tableOfContents = TOC 3
   , bootstrap = False
+  , bulma = False
   , highlighting = codeHTML
   , sectionStyling = \_ a b -> a >> b
   , separator = Just ' ' }
@@ -149,12 +152,14 @@ sectionHTML os depth (Section ws _ od) = sectionStyling os depth theHead theBody
 
 blockHTML :: OrgStyle -> Block -> Html ()
 blockHTML os b = case b of
-  Quote t      -> blockquote_ . p_ $ toHtml t
-  Example t    -> pre_ [class_ "example"] $ toHtml t
-  Code l t     -> highlighting os l t
-  List is      -> listItemsHTML os is
-  Table rw     -> tableHTML os rw
-  Paragraph ws -> p_ $ paragraphHTML os ws
+  Quote t                  -> blockquote_ . p_ $ toHtml t
+  Example t | bootstrap os -> pre_ [class_ "example"] $ toHtml t
+            | bulma os     -> div_ [class_ "box"] $ toHtml t
+            | otherwise    -> pre_ $ toHtml t
+  Code l t                 -> highlighting os l t
+  List is                  -> listItemsHTML os is
+  Table rw                 -> tableHTML os rw
+  Paragraph ws             -> p_ $ paragraphHTML os ws
 
 -- | Mimicks the functionality of Emacs' native HTML export.
 codeHTML :: Highlighting
