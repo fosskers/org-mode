@@ -2,7 +2,7 @@
 
 -- |
 -- Module    : Data.Org.Lucid
--- Copyright : (c) Colin Woodbury, 2020
+-- Copyright : (c) Colin Woodbury, 2020 - 2021
 -- License   : BSD3
 -- Maintainer: Colin Woodbury <colin@fosskers.ca>
 --

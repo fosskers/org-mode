@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.6.0 (2021-04-05)
+
+#### Added
+
+- `OrgStyle` now contains the field `bulma :: Bool` for adding
+  [Bulma](https://bulma.io/) classes to certain elements.
+
+#### Changelog
+
+- Images are now wrapped in a `<figure>` element as well.
+
 ## 1.5.0 (2020-09-04)
 
 #### Added
