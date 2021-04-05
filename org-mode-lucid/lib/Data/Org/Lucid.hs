@@ -154,7 +154,7 @@ blockHTML :: OrgStyle -> Block -> Html ()
 blockHTML os b = case b of
   Quote t                  -> blockquote_ . p_ $ toHtml t
   Example t | bootstrap os -> pre_ [class_ "example"] $ toHtml t
-            | bulma os     -> div_ [class_ "box"] $ toHtml t
+            | bulma os     -> pre_ [class_ "box"] $ toHtml t
             | otherwise    -> pre_ $ toHtml t
   Code l t                 -> highlighting os l t
   List is                  -> listItemsHTML os is
