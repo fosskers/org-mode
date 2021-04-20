@@ -2,7 +2,7 @@
 
 | Build                                                          | ~org-mode~ Release                            | ~org-mode-lucid~ Release                            |
 |----------------------------------------------------------------+-----------------------------------------------+-----------------------------------------------------|
-| [[https://github.com/fosskers/org-mode/workflows/Tests/badge.svg]] | [[http://hackage.haskell.org/package/aura][https://img.shields.io/hackage/v/org-mode.svg]] | [[https://img.shields.io/hackage/v/org-mode-lucid.svg]] |
+| [[https://github.com/fosskers/org-mode/workflows/Tests/badge.svg]] | [[http://hackage.haskell.org/package/org-mode][https://img.shields.io/hackage/v/org-mode.svg]] | [[https://hackage.haskell.org/package/org-mode-lucid][https://img.shields.io/hackage/v/org-mode-lucid.svg]] |
 
 The ~org-mode~ suite of libraries allow one to parse text in [[https://orgmode.org/][Emacs Org Mode]]
 format and manipulate it into other useful types.
