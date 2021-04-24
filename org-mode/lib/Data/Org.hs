@@ -385,7 +385,7 @@ punc = ".,!?():;'"
 tags :: Parser Words
 tags = do
   void $ char ':'
-  Tags <$> (T.pack . NEL.toList <$> some letterChar) `sepEndBy1` char ':'
+  Tags <$> (T.pack . NEL.toList <$> some (alphaNumChar <|> char '_' <|> char '@')) `sepEndBy1` char ':'
 
 image :: Parser Words
 image = between (char '[') (char ']') $

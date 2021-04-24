@@ -40,7 +40,10 @@ suite simple full = testGroup "Unit Tests"
       $ OrgDoc []
       [ Section [Plain "A"] [] (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] [] emptyDoc])
       , Section [Plain "C"] [] emptyDoc ]
-    , testCase "Header - Tags"
+    , testCase "Header - One line, single tag"
+      $ testPretty orgP "Header" "* A  :this:"
+      $ OrgDoc [] [Section [Plain "A"] ["this"] emptyDoc]
+    , testCase "Header - One line, multiple tags"
       $ testPretty orgP "Header" "* A  :this:that:"
       $ OrgDoc [] [Section [Plain "A"] ["this", "that"] emptyDoc]
     , testCase "Header - More Tags"
