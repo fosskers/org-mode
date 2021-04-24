@@ -192,6 +192,8 @@ suite simple full = testGroup "Unit Tests"
         Right r -> case parse orgFile "test.org - reparse" (prettyOrgFile r) of
           Left eb' -> assertFailure $ errorBundlePretty eb'
           Right r' -> r' @?= r
+    , testCase "Full: Tag Extraction"
+      $ (allDocTags . orgDoc <$> parse orgFile "test.org" full) @?= Right ["tag1", "tag2", "tag3"]
     ]
   , testGroup "Megaparsec Sanity"
     [ testCase "sepEndBy1" $ testPretty sepTest "sepBy1" "A.A.A.B" ['A', 'A', 'A']

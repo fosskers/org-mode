@@ -19,7 +19,9 @@ module Data.Org
   , emptyOrgFile
   , OrgDoc(..)
   , emptyDoc
+  , allDocTags
   , Section(..)
+  , allSectionTags
   , Block(..)
   , Words(..)
   , ListItems(..)
@@ -55,6 +57,8 @@ import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as M
 import           Data.Semigroup (sconcat)
+import           Data.Set (Set)
+import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Void (Void)
@@ -102,6 +106,16 @@ data OrgDoc = OrgDoc
 emptyDoc :: OrgDoc
 emptyDoc = OrgDoc [] []
 
+-- | All unique section tags in the entire document.
+--
+-- Section tags appear on the same row as a header title, but right-aligned.
+--
+-- @
+-- * This is a Heading                :tag1:tag2:
+-- @
+allDocTags :: OrgDoc -> Set Text
+allDocTags = foldMap allSectionTags . docSections
+
 -- | Some logically distinct block of Org content.
 data Block
   = Quote Text
@@ -127,6 +141,10 @@ data Section = Section
   , sectionDoc     :: OrgDoc }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
+
+-- | All unique tags with a section and its subsections.
+allSectionTags :: Section -> Set Text
+allSectionTags (Section _ sts doc) = S.fromList sts <> allDocTags doc
 
 -- | An org list constructed of @-@ characters.
 --
@@ -231,7 +249,7 @@ orgP' depth = L.lexeme space $ OrgDoc
       , try table
       , paragraph ]  -- TODO Paragraph needs to fail if it detects a heading.
 
--- | If a line stars with @*@ and a space, it is a `Section` heading.
+-- | If a line starts with @*@ and a space, it is a `Section` heading.
 heading :: Parser (T.Text, NonEmpty Words, [Text])
 heading = do
   stars <- someOf '*' <* char ' '
