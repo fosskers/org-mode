@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               org-mode
-version:            1.1.1
+version:            1.2.0
 synopsis:           Parser for Emacs org-mode files.
 description:        Parser for Emacs org-mode files.
 category:           Data
