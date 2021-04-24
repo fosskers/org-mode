@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+#### Fixed
+
+- Match the newest `org-mode`.
+
 ## 1.6.0 (2021-04-05)
 
 #### Added
