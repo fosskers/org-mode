@@ -193,7 +193,6 @@ data Words
   | Strike Text
   | Link URL (Maybe Text)
   | Image URL
-  | Tags (NonEmpty Text)
   | Punct Char
   | Plain Text
   deriving stock (Eq, Show, Generic)
@@ -253,10 +252,10 @@ orgP' depth = L.lexeme space $ OrgDoc
 heading :: Parser (T.Text, NonEmpty Words, [Text])
 heading = do
   stars <- someOf '*' <* char ' '
-  ws <- line '\n'
-  case nelUnsnoc ws of
-    (Tags ts, Just rest) -> pure (stars, rest, NEL.toList ts)
-    _                    -> pure (stars, ws, [])
+  (ws, mts) <- headerLine
+  case mts of
+    Nothing -> pure (stars, ws, [])
+    Just ts -> pure (stars, ws, NEL.toList ts)
 
 section :: Int -> Parser Section
 section depth = L.lexeme space $ do
@@ -350,8 +349,14 @@ paragraph = L.lexeme space $ do
   notFollowedBy heading
   Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
 
+headerLine :: Parser (NonEmpty Words, Maybe (NonEmpty Text))
+headerLine = do
+  ws <- (wordChunk '\n' <* hspace) `someTill` lookAhead (void tags <|> void (char '\n') <|> eof)
+  ts <- optional tags
+  pure (ws, ts)
+
 line :: Char -> Parser (NonEmpty Words)
-line end = sepEndBy1 (wordChunk end) (manyOf ' ')
+line end = wordChunk end `sepEndBy1` manyOf ' '
 
 -- | RULES
 --
@@ -372,20 +377,20 @@ wordChunk end = choice
   , try $ Strike    <$> between (char '+') (char '+') (someTill' '+') <* pOrS
   , try image
   , try link
-  , try tags
   , try $ Punct     <$> oneOf punc
   , Plain           <$> takeWhile1P (Just "plain text") (\c -> c /= ' ' && c /= end) ]
   where
+    -- | Punctuation, space, or the end of the file.
     pOrS :: Parser ()
     pOrS = lookAhead $ void (oneOf $ end : ' ' : punc) <|> eof
 
 punc :: String
 punc = ".,!?():;'"
 
-tags :: Parser Words
+tags :: Parser (NonEmpty Text)
 tags = do
   void $ char ':'
-  Tags <$> (T.pack . NEL.toList <$> some (alphaNumChar <|> char '_' <|> char '@')) `sepEndBy1` char ':'
+  (T.pack . NEL.toList <$> some (alphaNumChar <|> char '_' <|> char '@')) `sepEndBy1` char ':'
 
 image :: Parser Words
 image = between (char '[') (char ']') $
@@ -497,9 +502,5 @@ prettyWords w = case w of
   Link (URL url) Nothing  -> "[[" <> url <> "]]"
   Link (URL url) (Just t) -> "[[" <> url <> "][" <> t <> "]]"
   Image (URL url)         -> "[[" <> url <> "]]"
-  Tags ts                 ->  ":" <> T.intercalate ":" (NEL.toList ts) <> ":"
   Punct c                 -> T.singleton c
   Plain t                 -> t
-
-nelUnsnoc :: NonEmpty a -> (a, Maybe (NonEmpty a))
-nelUnsnoc ne = (NEL.last ne, NEL.nonEmpty $ NEL.init ne)
