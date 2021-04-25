@@ -136,15 +136,17 @@ data Block
 -- This is content in the sub ~OrgDoc~.
 -- @
 data Section = Section
-  { sectionHeading :: NonEmpty Words
-  , sectionTags    :: [Text]
-  , sectionDoc     :: OrgDoc }
+  { sectionHeading  :: NonEmpty Words
+  , sectionTags     :: [Text]
+  , sectionClosed   :: Maybe Text  -- TODO Use a time type.
+  , sectionDeadline :: Maybe Text -- TODO Here too.
+  , sectionDoc      :: OrgDoc }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (Hashable)
 
 -- | All unique tags with a section and its subsections.
 allSectionTags :: Section -> Set Text
-allSectionTags (Section _ sts doc) = S.fromList sts <> allDocTags doc
+allSectionTags (Section _ sts _ _ doc) = S.fromList sts <> allDocTags doc
 
 -- | An org list constructed of @-@ characters.
 --
@@ -264,7 +266,7 @@ section depth = L.lexeme space $ do
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
   void space
-  Section ws ts <$> orgP' (succ depth)
+  Section ws ts Nothing Nothing <$> orgP' (succ depth) -- TODO
 
 quote :: Parser Block
 quote = L.lexeme space $ do
@@ -439,13 +441,34 @@ prettyOrg' depth (OrgDoc bs ss) =
   T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
 
 prettySection :: Int -> Section -> Text
-prettySection depth (Section ws ts od) = headig <> "\n\n" <> subdoc
+prettySection depth (Section ws ts cl dl od) = T.intercalate "\n" [headig, time, subdoc]
   where
     -- TODO There is likely a punctuation bug here.
+    --
+    -- Sun Apr 25 09:59:01 AM PDT 2021: I wish you had elaborated.
     headig = T.unwords
       $ T.replicate depth "*"
       : NEL.toList (NEL.map prettyWords ws)
       <> bool [":" <> T.intercalate ":" ts <> ":"] [] (null ts)
+
+    -- | Timestamps can appear in one of four configurations:
+    --
+    -- 1. None.
+    -- 2. Just a "CLOSED" if it were from a TODO without a deadline.
+    -- 3. Just a "DEADLINE" if it is yet to be complete.
+    -- 4. "CLOSED" first then "DEADLINE" if it were an assigned, completed task.
+    time :: Text
+    time = case (cl, dl) of
+      (Nothing, Nothing) -> ""
+      (Just x, Nothing)  -> T.replicate (depth + 1) " " <> cl' x
+      (Nothing, Just y)  -> T.replicate (depth + 1) " " <> dl' y
+      (Just x, Just y)   -> T.replicate (depth + 1) " " <> cl' x <> " " <> dl' y
+
+    cl' :: Text -> Text
+    cl' x = "CLOSED: [" <> x <> "]"
+
+    dl' :: Text -> Text
+    dl' x = "DEADLINE: <" <> x <> ">"
 
     subdoc :: Text
     subdoc = prettyOrg' (succ depth) od
