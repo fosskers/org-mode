@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+#### Added
+
+- Functions `allDocTags` and `allSectionTags` for extracting unique `Set`s of
+  recursive heading tags.
+
+#### Changed
+
+- **Breaking:** The `Tags` variant has been removed from the `Words` type.
+
+#### Fixed
+
+- Heading tags are properly parsed.
+
 ## 1.1.1 (2021-04-04)
 
 #### Fixed

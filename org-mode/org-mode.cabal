@@ -1,13 +1,13 @@
 cabal-version:      2.2
 name:               org-mode
-version:            1.1.1
+version:            1.2.0
 synopsis:           Parser for Emacs org-mode files.
 description:        Parser for Emacs org-mode files.
 category:           Data
 homepage:           https://github.com/fosskers/org-mode
 author:             Colin Woodbury
 maintainer:         colin@fosskers.ca
-copyright:          2020 Colin Woodbury
+copyright:          2020 - 2021 Colin Woodbury
 license:            BSD-3-Clause
 license-file:       LICENSE
 build-type:         Simple

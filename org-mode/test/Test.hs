@@ -40,7 +40,10 @@ suite simple full = testGroup "Unit Tests"
       $ OrgDoc []
       [ Section [Plain "A"] [] (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] [] emptyDoc])
       , Section [Plain "C"] [] emptyDoc ]
-    , testCase "Header - Tags"
+    , testCase "Header - One line, single tag"
+      $ testPretty orgP "Header" "* A  :this:"
+      $ OrgDoc [] [Section [Plain "A"] ["this"] emptyDoc]
+    , testCase "Header - One line, multiple tags"
       $ testPretty orgP "Header" "* A  :this:that:"
       $ OrgDoc [] [Section [Plain "A"] ["this", "that"] emptyDoc]
     , testCase "Header - More Tags"
@@ -192,6 +195,8 @@ suite simple full = testGroup "Unit Tests"
         Right r -> case parse orgFile "test.org - reparse" (prettyOrgFile r) of
           Left eb' -> assertFailure $ errorBundlePretty eb'
           Right r' -> r' @?= r
+    , testCase "Full: Tag Extraction"
+      $ (allDocTags . orgDoc <$> parse orgFile "test.org" full) @?= Right ["tag1", "tag2", "tag3"]
     ]
   , testGroup "Megaparsec Sanity"
     [ testCase "sepEndBy1" $ testPretty sepTest "sepBy1" "A.A.A.B" ['A', 'A', 'A']

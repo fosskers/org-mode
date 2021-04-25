@@ -5,11 +5,11 @@
 
 Some text before the initial heading.
 
-* A Heading
+* A Heading                                                            :tag1:
 
-** A subheading
+** A subheading                                                        :tag2:
 
-*** We have to go deeper
+*** We have to go deeper                                               :tag3:
 
 *This is some bold text* within a normal paragraph. However I should tell you
 that the paragraph doesn't end there. It has multiple lines! Oh, but having only
@@ -23,7 +23,7 @@ So we'll make /a second one/. How about some code?
   main = putStrLn "org-mode tests"
 #+end_src
 
-** More
+** More                                                                :tag2:
 
 And a quote.
 

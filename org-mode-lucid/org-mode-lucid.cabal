@@ -1,13 +1,13 @@
 cabal-version:      2.2
 name:               org-mode-lucid
-version:            1.6.0
+version:            1.6.1
 synopsis:           Lucid integration for org-mode.
 description:        Lucid integration for org-mode.
 category:           Web
 homepage:           https://github.com/fosskers/org-mode
 author:             Colin Woodbury
 maintainer:         colin@fosskers.ca
-copyright:          2020 Colin Woodbury
+copyright:          2020 - 2021 Colin Woodbury
 license:            BSD-3-Clause
 license-file:       LICENSE
 build-type:         Simple
@@ -28,7 +28,7 @@ common commons
     , containers  >=0.6
     , hashable    >=1.2  && <1.4
     , lucid       ^>=2.9
-    , org-mode    ^>=1.1
+    , org-mode    ^>=1.2
     , text
 
 library
