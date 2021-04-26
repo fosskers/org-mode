@@ -56,6 +56,7 @@ import           Data.Hashable (Hashable(..))
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as M
+import           Data.Maybe (fromMaybe)
 import           Data.Semigroup (sconcat)
 import           Data.Set (Set)
 import qualified Data.Set as S
@@ -265,8 +266,30 @@ section depth = L.lexeme space $ do
   -- Fail if we've found a parent heading --
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
+  (cl, dl) <- fromMaybe (Nothing, Nothing) <$> optional (try timestamps)
   void space
-  Section ws ts Nothing Nothing <$> orgP' (succ depth) -- TODO
+  Section ws ts cl dl <$> orgP' (succ depth)
+
+timestamps :: Parser (Maybe Text, Maybe Text)
+timestamps = do
+  void newline
+  void hspace
+  mc <- optional closed
+  void hspace
+  md <- optional deadline
+  case (mc, md) of
+    (Nothing, Nothing) -> failure Nothing mempty
+    _                  -> pure (mc, md)
+
+closed :: Parser Text
+closed = do
+  void $ string "CLOSED: "
+  between (char '[') (char ']') (someTill' ']')  -- TODO What if newline?
+
+deadline :: Parser Text
+deadline = do
+  void $ string "DEADLINE: "
+  between (char '<') (char '>') (someTill' '>')  -- TODO What if newline?
 
 quote :: Parser Block
 quote = L.lexeme space $ do
