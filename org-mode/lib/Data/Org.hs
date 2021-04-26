@@ -52,13 +52,12 @@ import           Control.Applicative.Combinators.NonEmpty
 import           Control.Monad (void, when)
 import           Data.Bool (bool)
 import           Data.Functor (($>))
-import           Data.Hashable (Hashable(..))
+import           Data.Hashable (Hashable)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as M
 import           Data.Maybe (fromMaybe)
 import           Data.Semigroup (sconcat)
-import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Text as T
@@ -102,7 +101,6 @@ data OrgDoc = OrgDoc
   { docBlocks   :: [Block]
   , docSections :: [Section] }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 emptyDoc :: OrgDoc
 emptyDoc = OrgDoc [] []
@@ -114,7 +112,7 @@ emptyDoc = OrgDoc [] []
 -- @
 -- * This is a Heading                :tag1:tag2:
 -- @
-allDocTags :: OrgDoc -> Set Text
+allDocTags :: OrgDoc -> S.Set Text
 allDocTags = foldMap allSectionTags . docSections
 
 -- | Some logically distinct block of Org content.
@@ -126,7 +124,6 @@ data Block
   | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 -- | A subsection, marked by a heading line and followed recursively by an
 -- `OrgDoc`.
@@ -141,13 +138,13 @@ data Section = Section
   , sectionTags     :: [Text]
   , sectionClosed   :: Maybe Text  -- TODO Use a time type.
   , sectionDeadline :: Maybe Text -- TODO Here too.
+  , sectionProps    :: M.Map Text Text
   , sectionDoc      :: OrgDoc }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 -- | All unique tags with a section and its subsections.
-allSectionTags :: Section -> Set Text
-allSectionTags (Section _ sts _ _ doc) = S.fromList sts <> allDocTags doc
+allSectionTags :: Section -> S.Set Text
+allSectionTags (Section _ sts _ _ _ doc) = S.fromList sts <> allDocTags doc
 
 -- | An org list constructed of @-@ characters.
 --
@@ -162,12 +159,10 @@ allSectionTags (Section _ sts _ _ doc) = S.fromList sts <> allDocTags doc
 -- @
 newtype ListItems = ListItems (NonEmpty Item)
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 -- | A line in a bullet-list. Can contain sublists, as shown in `ListItems`.
 data Item = Item (NonEmpty Words) (Maybe ListItems)
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 -- | A row in an org table. Can have content or be a horizontal rule.
 --
@@ -178,12 +173,10 @@ data Item = Item (NonEmpty Words) (Maybe ListItems)
 -- @
 data Row = Break | Row (NonEmpty Column)
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 -- | A possibly empty column in an org table.
 data Column = Empty | Column (NonEmpty Words)
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 -- | The fundamental unit of Org text content. `Plain` units are split
 -- word-by-word.
@@ -209,7 +202,6 @@ newtype URL = URL Text
 -- | The programming language some source code block was written in.
 newtype Language = Language Text
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (Hashable)
 
 --------------------------------------------------------------------------------
 -- Parser
@@ -268,7 +260,7 @@ section depth = L.lexeme space $ do
   -- Otherwise continue --
   (cl, dl) <- fromMaybe (Nothing, Nothing) <$> optional (try timestamps)
   void space
-  Section ws ts cl dl <$> orgP' (succ depth)
+  Section ws ts cl dl mempty <$> orgP' (succ depth) -- TODO
 
 timestamps :: Parser (Maybe Text, Maybe Text)
 timestamps = do
@@ -464,7 +456,7 @@ prettyOrg' depth (OrgDoc bs ss) =
   T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
 
 prettySection :: Int -> Section -> Text
-prettySection depth (Section ws ts cl dl od) = T.intercalate "\n" [headig, time, subdoc]
+prettySection depth (Section ws ts cl dl ps od) = T.intercalate "\n" [headig, time, props, subdoc]
   where
     -- TODO There is likely a punctuation bug here.
     --
@@ -473,6 +465,9 @@ prettySection depth (Section ws ts cl dl od) = T.intercalate "\n" [headig, time,
       $ T.replicate depth "*"
       : NEL.toList (NEL.map prettyWords ws)
       <> bool [":" <> T.intercalate ":" ts <> ":"] [] (null ts)
+
+    indent :: Text
+    indent = T.replicate (depth + 1) " "
 
     -- | Timestamps can appear in one of four configurations:
     --
@@ -483,15 +478,23 @@ prettySection depth (Section ws ts cl dl od) = T.intercalate "\n" [headig, time,
     time :: Text
     time = case (cl, dl) of
       (Nothing, Nothing) -> ""
-      (Just x, Nothing)  -> T.replicate (depth + 1) " " <> cl' x
-      (Nothing, Just y)  -> T.replicate (depth + 1) " " <> dl' y
-      (Just x, Just y)   -> T.replicate (depth + 1) " " <> cl' x <> " " <> dl' y
+      (Just x, Nothing)  -> indent <> cl' x
+      (Nothing, Just y)  -> indent <> dl' y
+      (Just x, Just y)   -> indent <> cl' x <> " " <> dl' y
 
     cl' :: Text -> Text
     cl' x = "CLOSED: [" <> x <> "]"
 
     dl' :: Text -> Text
     dl' x = "DEADLINE: <" <> x <> ">"
+
+    props :: Text
+    props
+      | null ps = ""
+      | otherwise = T.intercalate "\n" $ (indent <> ":PROPERTIES:") : items <> [indent <> ":END:"]
+      where
+        items :: [Text]
+        items = map (\(k, v) -> indent <> ":" <> k <> ": " <> v) $ M.toList ps
 
     subdoc :: Text
     subdoc = prettyOrg' (succ depth) od

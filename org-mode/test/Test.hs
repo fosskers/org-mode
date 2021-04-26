@@ -28,44 +28,45 @@ suite :: T.Text -> T.Text -> TestTree
 suite simple full = testGroup "Unit Tests"
   [ testGroup "Basic Markup"
     [ testCase "Header" $ parseMaybe (section 1) "* A"
-      @?= Just (Section [Plain "A"] [] Nothing Nothing emptyDoc)
+      @?= Just (Section [Plain "A"] [] Nothing Nothing mempty emptyDoc)
     , testCase "Header - Subsection" $ parseMaybe (section 1) "* A\n** B"
-      @?= Just (Section [Plain "A"] [] Nothing Nothing (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing emptyDoc]))
+      @?= Just (Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc]))
     , testCase "Header - Back again"
       $ testPretty orgP "Header" "* A\n** B\n* C"
-      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing emptyDoc])
-                  , Section [Plain "C"] [] Nothing Nothing emptyDoc ]
+      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc])
+                  , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
     , testCase "Header - Contents"
       $ testPretty orgP "Header" "* A\nD\n\n** B\n* C"  -- TODO Requires an extra newline!
       $ OrgDoc []
-      [ Section [Plain "A"] [] Nothing Nothing (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] [] Nothing Nothing emptyDoc])
-      , Section [Plain "C"] [] Nothing Nothing emptyDoc ]
+      [ Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc])
+      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
     , testCase "Header - One line, single tag"
       $ testPretty orgP "Header" "* A  :this:"
-      $ OrgDoc [] [Section [Plain "A"] ["this"] Nothing Nothing emptyDoc]
+      $ OrgDoc [] [Section [Plain "A"] ["this"] Nothing Nothing mempty emptyDoc]
     , testCase "Header - One line, multiple tags"
       $ testPretty orgP "Header" "* A  :this:that:"
-      $ OrgDoc [] [Section [Plain "A"] ["this", "that"] Nothing Nothing emptyDoc]
+      $ OrgDoc [] [Section [Plain "A"] ["this", "that"] Nothing Nothing mempty emptyDoc]
     , testCase "Header - More Tags"
       $ testPretty orgP "Header" "* A  :this:that:\n** B   :other:\n* C"
       $ OrgDoc []
-      [ Section [Plain "A"] ["this", "that"] Nothing Nothing (OrgDoc [] [Section [Plain "B"] ["other"] Nothing Nothing emptyDoc])
-      , Section [Plain "C"] [] Nothing Nothing emptyDoc
+      [ Section [Plain "A"] ["this", "that"] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] ["other"] Nothing Nothing mempty emptyDoc])
+      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc
       ]
     , testCase "Header - CLOSED"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43]"
-      $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") Nothing emptyDoc ]
+      $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") Nothing mempty emptyDoc ]
     , testCase "Header - DEADLINE"
       $ testPretty orgP "Header" "* A\n  DEADLINE: <2021-04-19 Mon>"
-      $ OrgDoc [] [ Section [Plain "A"] [] Nothing (Just "2021-04-19 Mon") emptyDoc ]
+      $ OrgDoc [] [ Section [Plain "A"] [] Nothing (Just "2021-04-19 Mon") mempty emptyDoc ]
     , testCase "Header - CLOSED/DEADLINE"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>"
-      $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") (Just "2021-04-19 Mon") emptyDoc ]
+      $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") (Just "2021-04-19 Mon") mempty emptyDoc ]
     , testCase "Header - CLOSED/DEADLINE - More"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>\nD"
       $ OrgDoc [] [ Section [Plain "A"] []
                     (Just "2021-04-19 Mon 15:43")
                     (Just "2021-04-19 Mon")
+                    mempty
                     (OrgDoc [ Paragraph [Plain "D"] ] [])]
 
     , testCase "Bold" $ parseMaybe orgP "*Bold*"
