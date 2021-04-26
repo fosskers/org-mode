@@ -33,6 +33,11 @@ Always keep some cash on hand, you never know.
 - Albert Einstein
 #+end_quote
 
+** DONE Gotta do it
+   CLOSED: [2021-04-25 Sun 19:39] DEADLINE: <2021-04-25 Sun>
+
+Stuff.
+
 * Another Heading!
 
 [[https://www.fosskers.ca/][Check out my website.]] It has a blog with ~code~ samples.

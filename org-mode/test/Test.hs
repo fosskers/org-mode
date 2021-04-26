@@ -52,6 +52,21 @@ suite simple full = testGroup "Unit Tests"
       [ Section [Plain "A"] ["this", "that"] Nothing Nothing (OrgDoc [] [Section [Plain "B"] ["other"] Nothing Nothing emptyDoc])
       , Section [Plain "C"] [] Nothing Nothing emptyDoc
       ]
+    , testCase "Header - CLOSED"
+      $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43]"
+      $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") Nothing emptyDoc ]
+    , testCase "Header - DEADLINE"
+      $ testPretty orgP "Header" "* A\n  DEADLINE: <2021-04-19 Mon>"
+      $ OrgDoc [] [ Section [Plain "A"] [] Nothing (Just "2021-04-19 Mon") emptyDoc ]
+    , testCase "Header - CLOSED/DEADLINE"
+      $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>"
+      $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") (Just "2021-04-19 Mon") emptyDoc ]
+    , testCase "Header - CLOSED/DEADLINE - More"
+      $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>\nD"
+      $ OrgDoc [] [ Section [Plain "A"] []
+                    (Just "2021-04-19 Mon 15:43")
+                    (Just "2021-04-19 Mon")
+                    (OrgDoc [ Paragraph [Plain "D"] ] [])]
 
     , testCase "Bold" $ parseMaybe orgP "*Bold*"
       @?= Just (OrgDoc [Paragraph [Bold "Bold"]] [])
