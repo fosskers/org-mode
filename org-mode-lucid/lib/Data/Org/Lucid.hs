@@ -120,7 +120,7 @@ toc' os t depth (OrgDoc _ ss)
   | otherwise = ul_ $ traverse_ f ss
   where
     f :: Section -> Html ()
-    f (Section ws _ _ _ od) = do
+    f (Section ws _ _ _ _ od) = do
       li_ $ a_ [href_ $ "#" <> tocLabel ws] $ paragraphHTML os ws
       toc' os t (succ depth) od
 
@@ -134,7 +134,7 @@ orgHTML' os depth (OrgDoc bs ss) = do
 
 -- | Section timestamps and properties are ignored.
 sectionHTML :: OrgStyle -> Int -> Section -> Html ()
-sectionHTML os depth (Section ws _ _ _ od) = sectionStyling os depth theHead theBody
+sectionHTML os depth (Section ws _ _ _ _ od) = sectionStyling os depth theHead theBody
   where
     theHead :: Html ()
     theHead = heading [id_ $ tocLabel ws] $ paragraphHTML os ws
