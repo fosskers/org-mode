@@ -38,6 +38,8 @@ module Data.Org
   , meta
   , orgP
   , section
+  , properties
+  , property
   , paragraph
   , table
   , list
@@ -259,8 +261,9 @@ section depth = L.lexeme space $ do
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
   (cl, dl) <- fromMaybe (Nothing, Nothing) <$> optional (try timestamps)
+  props <- fromMaybe mempty <$> optional (try properties)
   void space
-  Section ws ts cl dl mempty <$> orgP' (succ depth) -- TODO
+  Section ws ts cl dl props <$> orgP' (succ depth)
 
 timestamps :: Parser (Maybe Text, Maybe Text)
 timestamps = do
@@ -282,6 +285,26 @@ deadline :: Parser Text
 deadline = do
   void $ string "DEADLINE: "
   between (char '<') (char '>') (someTill' '>')  -- TODO What if newline?
+
+properties :: Parser (M.Map Text Text)
+properties = do
+  void newline
+  void hspace
+  void $ string ":PROPERTIES:"
+  void newline
+  void hspace
+  ps <- (property <* newline <* hspace) `manyTill` string ":END:"
+  pure $ M.fromList ps
+
+property :: Parser (Text, Text)
+property = do
+  void hspace
+  void $ char ':'
+  key <- someTill' ':' -- TODO Newlines?
+  void $ char ':'
+  void hspace
+  val <- takeWhile1P (Just "Property Value") (/= '\n')
+  pure (key, val)
 
 quote :: Parser Block
 quote = L.lexeme space $ do
