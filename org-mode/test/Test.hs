@@ -72,14 +72,11 @@ suite simple full = testGroup "Unit Tests"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :END:"
       $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [] emptyDoc]
     , testCase "Header - One Property"
-      $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :END:"
-      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack")] emptyDoc]
+      $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :END:\n\nHi"
+      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack")] (OrgDoc [Paragraph [Plain "Hi"]] []) ]
     , testCase "Properties"
-      $ testPretty properties "Properties" "\n  :PROPERTIES:\n  :Cat: Jack\n  :END:"
-      $ [("Cat", "Jack")]
-    , testCase "Property"
-      $ testPretty property "Property" "  :Cat: Jack"
-      $ ("Cat", "Jack")
+      $ testPretty properties "Properties" "\n  :PROPERTIES:\n  :Cat: Jack\n  :END:" [("Cat", "Jack")]
+    , testCase "Property" $ testPretty property "Property" "  :Cat: Jack" ("Cat", "Jack")
 
     , testCase "Bold" $ parseMaybe orgP "*Bold*"
       @?= Just (OrgDoc [Paragraph [Bold "Bold"]] [])
