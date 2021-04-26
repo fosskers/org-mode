@@ -58,7 +58,7 @@ import           Data.Hashable (Hashable)
 import           Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as M
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (catMaybes, fromMaybe)
 import           Data.Semigroup (sconcat)
 import qualified Data.Set as S
 import           Data.Text (Text)
@@ -479,7 +479,8 @@ prettyOrg' depth (OrgDoc bs ss) =
   T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
 
 prettySection :: Int -> Section -> Text
-prettySection depth (Section ws ts cl dl ps od) = T.intercalate "\n" [headig, time, props, subdoc]
+prettySection depth (Section ws ts cl dl ps od) =
+  T.intercalate "\n" $ catMaybes [Just headig, time, props, Just subdoc]
   where
     -- TODO There is likely a punctuation bug here.
     --
@@ -498,12 +499,12 @@ prettySection depth (Section ws ts cl dl ps od) = T.intercalate "\n" [headig, ti
     -- 2. Just a "CLOSED" if it were from a TODO without a deadline.
     -- 3. Just a "DEADLINE" if it is yet to be complete.
     -- 4. "CLOSED" first then "DEADLINE" if it were an assigned, completed task.
-    time :: Text
+    time :: Maybe Text
     time = case (cl, dl) of
-      (Nothing, Nothing) -> ""
-      (Just x, Nothing)  -> indent <> cl' x
-      (Nothing, Just y)  -> indent <> dl' y
-      (Just x, Just y)   -> indent <> cl' x <> " " <> dl' y
+      (Nothing, Nothing) -> Nothing
+      (Just x, Nothing)  -> Just $ indent <> cl' x
+      (Nothing, Just y)  -> Just $ indent <> dl' y
+      (Just x, Just y)   -> Just $ indent <> cl' x <> " " <> dl' y
 
     cl' :: Text -> Text
     cl' x = "CLOSED: [" <> x <> "]"
@@ -511,10 +512,10 @@ prettySection depth (Section ws ts cl dl ps od) = T.intercalate "\n" [headig, ti
     dl' :: Text -> Text
     dl' x = "DEADLINE: <" <> x <> ">"
 
-    props :: Text
+    props :: Maybe Text
     props
-      | null ps = ""
-      | otherwise = T.intercalate "\n" $ (indent <> ":PROPERTIES:") : items <> [indent <> ":END:"]
+      | null ps = Nothing
+      | otherwise = Just . T.intercalate "\n" $ (indent <> ":PROPERTIES:") : items <> [indent <> ":END:"]
       where
         items :: [Text]
         items = map (\(k, v) -> indent <> ":" <> k <> ": " <> v) $ M.toList ps

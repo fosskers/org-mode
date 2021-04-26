@@ -38,6 +38,11 @@ Always keep some cash on hand, you never know.
 
 Stuff.
 
+** Props
+   :PROPERTIES:
+   :Yes: Fun
+   :END:
+
 * Another Heading!
 
 [[https://www.fosskers.ca/][Check out my website.]] It has a blog with ~code~ samples.

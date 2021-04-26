@@ -11,5 +11,8 @@ Another paragraph!
 Text!
 
 * Heading 3
+  :PROPERTIES:
+  :Yes: Fun
+  :END:
 
 More text!

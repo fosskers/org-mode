@@ -72,8 +72,11 @@ suite simple full = testGroup "Unit Tests"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :END:"
       $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [] emptyDoc]
     , testCase "Header - One Property"
-      $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :END:\n\nHi"
+      $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :END:\nHi"
       $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack")] (OrgDoc [Paragraph [Plain "Hi"]] []) ]
+    , testCase "Header - Two Properties"
+      $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :Age: 7\n  :END:"
+      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack"), ("Age", "7")] emptyDoc ]
     , testCase "Properties"
       $ testPretty properties "Properties" "\n  :PROPERTIES:\n  :Cat: Jack\n  :END:" [("Cat", "Jack")]
     , testCase "Property" $ testPretty property "Property" "  :Cat: Jack" ("Cat", "Jack")
