@@ -72,6 +72,7 @@ import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Text as T
 import           Data.Time (Day, TimeOfDay)
+import           Data.Time.Calendar (DayOfWeek)
 import           Data.Void (Void)
 import           GHC.Generics (Generic)
 import           System.FilePath (takeExtension)
@@ -136,39 +137,41 @@ data Block
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show, Generic)
 
--- | An org-mode timestamp. Must contain at least a year-month-day:
+-- | An org-mode timestamp. Must contain at least a year-month-day and the day
+-- of the week:
 --
 -- @
--- \<2021-04-27\>
+-- \<2021-04-27 Tue\>
 -- @
 --
 -- but also may contain a time:
 --
 -- @
--- \<2021-04-27 12:00\>
+-- \<2021-04-27 Tue 12:00\>
 -- @
 --
 -- or a time range:
 --
 -- @
--- \<2021-04-27 12:00-13:00\>
+-- \<2021-04-27 Tue 12:00-13:00\>
 -- @
 --
 -- and/or a repeater value:
 --
 -- @
--- \<2021-04-27 +1w\>
+-- \<2021-04-27 Tue +1w\>
 -- @
 data OrgDateTime = OrgDateTime
-  { dateDay    :: Day
-  , dateTime   :: Maybe OrgTime
-  , dateRepeat :: Maybe Repeater }
+  { dateDay       :: Day
+  , dateDayOfWeek :: DayOfWeek
+  , dateTime      :: Maybe OrgTime
+  , dateRepeat    :: Maybe Repeater }
 
 -- | The time portion of the full timestamp. May be a range, as seen in the
 -- following full timestamp:
 --
 -- @
--- \<2021-04-27 12:00-13:00\>
+-- \<2021-04-27 Tue 12:00-13:00\>
 -- @
 data OrgTime = OrgTime
   { timeStart :: TimeOfDay
