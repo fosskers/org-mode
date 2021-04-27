@@ -22,8 +22,7 @@ common commons
   default-extensions: OverloadedStrings
   ghc-options:
     -Wall -Wpartial-fields -Wincomplete-record-updates
-    -Wincomplete-uni-patterns -Widentities
-    -funclutter-valid-hole-fits
+    -Wincomplete-uni-patterns -Widentities -funclutter-valid-hole-fits
 
   build-depends:
     , base        >=4.12 && <5
@@ -39,6 +38,7 @@ library
     , filepath
     , hashable            >=1.2 && <1.4
     , parser-combinators  >=1.1 && <1.3
+    , time                >=1.9
 
 test-suite org-mode-test
   import:         commons

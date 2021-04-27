@@ -15,11 +15,19 @@
 
 module Data.Org
   ( -- * Types
+    -- ** Top-level
     OrgFile(..)
   , emptyOrgFile
   , OrgDoc(..)
   , emptyDoc
   , allDocTags
+    -- ** Timestamps
+  , OrgDateTime(..)
+  , OrgTime(..)
+  , Repeater(..)
+  , TimeDirection(..)
+  , Interval(..)
+    -- ** Markup
   , Section(..)
   , allSectionTags
   , Block(..)
@@ -63,6 +71,7 @@ import           Data.Semigroup (sconcat)
 import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Text as T
+import           Data.Time (Day, TimeOfDay)
 import           Data.Void (Void)
 import           GHC.Generics (Generic)
 import           System.FilePath (takeExtension)
@@ -126,6 +135,57 @@ data Block
   | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Show, Generic)
+
+-- | An org-mode timestamp. Must contain at least a year-month-day:
+--
+-- @
+-- \<2021-04-27\>
+-- @
+--
+-- but also may contain a time:
+--
+-- @
+-- \<2021-04-27 12:00\>
+-- @
+--
+-- or a time range:
+--
+-- @
+-- \<2021-04-27 12:00-13:00\>
+-- @
+--
+-- and/or a repeater value:
+--
+-- @
+-- \<2021-04-27 +1w\>
+-- @
+data OrgDateTime = OrgDateTime
+  { dateDay    :: Day
+  , dateTime   :: Maybe OrgTime
+  , dateRepeat :: Maybe Repeater }
+
+-- | The time portion of the full timestamp. May be a range, as seen in the
+-- following full timestamp:
+--
+-- @
+-- \<2021-04-27 12:00-13:00\>
+-- @
+data OrgTime = OrgTime
+  { timeStart :: TimeOfDay
+  , timeEnd   :: Maybe TimeOfDay }
+
+-- | An indication of how often a timestamp should be automatically reapplied in
+-- the Org Agenda.
+data Repeater = Repeater
+  { repDirection :: TimeDirection
+  , repValue     :: Word
+  , repInterval  :: Interval }
+
+-- | Is the `Repeater` value an offset into the past or future?
+data TimeDirection = Past | Future
+
+-- | The timestamp repitition unit.
+data Interval = Day | Week | Month | Year
 
 -- | A subsection, marked by a heading line and followed recursively by an
 -- `OrgDoc`.
