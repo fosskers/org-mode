@@ -32,58 +32,87 @@ suite simple full = testGroup "Unit Tests"
     [ testCase "Header" $ parseMaybe (section 1) "* A"
       @?= Just (Section [Plain "A"] [] Nothing Nothing mempty emptyDoc)
     , testCase "Header - Subsection" $ parseMaybe (section 1) "* A\n** B"
-      @?= Just (Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc]))
+      @?= Just (Section [Plain "A"] [] Nothing Nothing mempty
+                (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc]))
+
     , testCase "Header - Back again"
       $ testPretty orgP "Header" "* A\n** B\n* C"
-      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc])
-                  , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
+      $ OrgDoc []
+      [ Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc])
+      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
+
     , testCase "Header - Contents"
       $ testPretty orgP "Header" "* A\nD\n\n** B\n* C"  -- TODO Requires an extra newline!
       $ OrgDoc []
       [ Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc])
       , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
+
     , testCase "Header - One line, single tag"
       $ testPretty orgP "Header" "* A  :this:"
       $ OrgDoc [] [Section [Plain "A"] ["this"] Nothing Nothing mempty emptyDoc]
+
     , testCase "Header - One line, multiple tags"
       $ testPretty orgP "Header" "* A  :this:that:"
       $ OrgDoc [] [Section [Plain "A"] ["this", "that"] Nothing Nothing mempty emptyDoc]
+
     , testCase "Header - More Tags"
       $ testPretty orgP "Header" "* A  :this:that:\n** B   :other:\n* C"
       $ OrgDoc []
       [ Section [Plain "A"] ["this", "that"] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] ["other"] Nothing Nothing mempty emptyDoc])
-      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc
-      ]
+      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
+
     , testCase "Header - CLOSED"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43]"
-      -- $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") Nothing mempty emptyDoc ]
-      $ let dt = OrgDateTime { dateDay = fromGregorian 2021 4 19
+      $ let cl = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
-                             , dateTime = Just (OrgTime (TimeOfDay 15 43 0) Nothing)
+                             , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
                              , dateRepeat = Nothing }
-        in OrgDoc [] [ Section [Plain "A"] [] (Just dt) Nothing mempty emptyDoc ]
-    -- , testCase "Header - DEADLINE"
-    --   $ testPretty orgP "Header" "* A\n  DEADLINE: <2021-04-19 Mon>"
-    --   $ OrgDoc [] [ Section [Plain "A"] [] Nothing (Just "2021-04-19 Mon") mempty emptyDoc ]
-    -- , testCase "Header - CLOSED/DEADLINE"
-    --   $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>"
-    --   $ OrgDoc [] [ Section [Plain "A"] [] (Just "2021-04-19 Mon 15:43") (Just "2021-04-19 Mon") mempty emptyDoc ]
-    -- , testCase "Header - CLOSED/DEADLINE - More"
-    --   $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>\nD"
-    --   $ OrgDoc [] [ Section [Plain "A"] []
-    --                 (Just "2021-04-19 Mon 15:43")
-    --                 (Just "2021-04-19 Mon")
-    --                 mempty
-    --                 (OrgDoc [ Paragraph [Plain "D"] ] [])]
+        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) Nothing mempty emptyDoc ]
+
+    , testCase "Header - DEADLINE"
+      $ testPretty orgP "Header" "* A\n  DEADLINE: <2021-04-19 Mon>"
+      $ let dl = OrgDateTime { dateDay = fromGregorian 2021 4 19
+                             , dateDayOfWeek = Monday
+                             , dateTime = Nothing
+                             , dateRepeat = Nothing }
+        in OrgDoc [] [ Section [Plain "A"] [] Nothing (Just dl) mempty emptyDoc ]
+
+    , testCase "Header - CLOSED/DEADLINE"
+      $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>"
+      $ let dl = OrgDateTime { dateDay = fromGregorian 2021 4 19
+                             , dateDayOfWeek = Monday
+                             , dateTime = Nothing
+                             , dateRepeat = Nothing }
+            cl = OrgDateTime { dateDay = fromGregorian 2021 4 19
+                             , dateDayOfWeek = Monday
+                             , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
+                             , dateRepeat = Nothing }
+        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) (Just dl) mempty emptyDoc ]
+
+    , testCase "Header - CLOSED/DEADLINE - More"
+      $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>\nD"
+      $ let dl = OrgDateTime { dateDay = fromGregorian 2021 4 19
+                             , dateDayOfWeek = Monday
+                             , dateTime = Nothing
+                             , dateRepeat = Nothing }
+            cl = OrgDateTime { dateDay = fromGregorian 2021 4 19
+                             , dateDayOfWeek = Monday
+                             , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
+                             , dateRepeat = Nothing }
+        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) (Just dl) mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
+
     , testCase "Header - Empty Properties Drawer"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :END:"
       $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [] emptyDoc]
+
     , testCase "Header - One Property"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :END:\nHi"
       $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack")] (OrgDoc [Paragraph [Plain "Hi"]] []) ]
+
     , testCase "Header - Two Properties"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :Age: 7\n  :END:"
       $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack"), ("Age", "7")] emptyDoc ]
+
     , testCase "Properties"
       $ testPretty properties "Properties" "\n  :PROPERTIES:\n  :Cat: Jack\n  :END:" [("Cat", "Jack")]
     , testCase "Property" $ testPretty property "Property" "  :Cat: Jack" ("Cat", "Jack")
