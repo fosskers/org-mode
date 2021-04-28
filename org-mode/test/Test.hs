@@ -75,6 +75,14 @@ suite simple full = testGroup "Unit Tests"
                              , dateRepeat = Nothing }
         in OrgDoc [] [ (titled (Plain "A")) { sectionDeadline = Just dl } ]
 
+    , testCase "Header - SCHEDULED"
+      $ testPretty orgP "Header" "* A\n  SCHEDULED: <2021-04-19 Mon>"
+      $ let sc = OrgDateTime { dateDay = fromGregorian 2021 4 19
+                             , dateDayOfWeek = Monday
+                             , dateTime = Nothing
+                             , dateRepeat = Nothing }
+        in OrgDoc [] [ (titled (Plain "A")) { sectionScheduled = Just sc } ]
+
     , testCase "Header - CLOSED/DEADLINE"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>"
       $ let dl = OrgDateTime { dateDay = fromGregorian 2021 4 19

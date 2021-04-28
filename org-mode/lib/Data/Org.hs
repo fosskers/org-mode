@@ -342,21 +342,23 @@ section depth = L.lexeme space $ do
   -- Fail if we've found a parent heading --
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
-  (cl, dl) <- fromMaybe (Nothing, Nothing) <$> optional (try timestamps)
+  (cl, dl, sc) <- fromMaybe (Nothing, Nothing, Nothing) <$> optional (try timestamps)
   props <- fromMaybe mempty <$> optional (try properties)
   void space
-  Section ws ts cl dl Nothing Nothing props <$> orgP' (succ depth) -- TODO
+  Section ws ts cl dl sc Nothing props <$> orgP' (succ depth) -- TODO
 
-timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime)
+timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime, Maybe OrgDateTime)
 timestamps = do
   void newline
   void hspace
   mc <- optional closed
   void hspace
   md <- optional deadline
-  case (mc, md) of
-    (Nothing, Nothing) -> failure Nothing mempty
-    _                  -> pure (mc, md)
+  void hspace
+  ms <- optional scheduled
+  case (mc, md, ms) of
+    (Nothing, Nothing, Nothing) -> failure Nothing mempty
+    _                           -> pure (mc, md, ms)
 
 closed :: Parser OrgDateTime
 closed = do
@@ -368,6 +370,11 @@ deadline = do
   void $ string "DEADLINE: "
   between (char '<') (char '>') timestamp
 
+scheduled :: Parser OrgDateTime
+scheduled = do
+  void $ string "SCHEDULED: "
+  between (char '<') (char '>') timestamp
+
 timestamp :: Parser OrgDateTime
 timestamp = OrgDateTime
   <$> date
@@ -376,13 +383,7 @@ timestamp = OrgDateTime
   <*> optional (hspace1 *> repeater)
 
 date :: Parser Day
-date = do
-  y <- decimal
-  void $ char '-'
-  m <- decimal
-  void $ char '-'
-  d <- decimal
-  pure $ fromGregorian y m d
+date = fromGregorian <$> decimal <*> (char '-' *> decimal) <*> (char '-' *> decimal)
 
 dow :: Parser DayOfWeek
 dow = choice
@@ -607,7 +608,7 @@ prettyOrg' depth (OrgDoc bs ss) =
 
 prettySection :: Int -> Section -> Text
 prettySection depth (Section ws ts cl dl sc tm ps od) =
-  T.intercalate "\n" $ catMaybes [Just headig, time, props, Just subdoc]
+  T.intercalate "\n" $ catMaybes [Just headig, stamps, time <$> tm, props, Just subdoc]
   where
     -- TODO There is likely a punctuation bug here.
     --
@@ -620,24 +621,24 @@ prettySection depth (Section ws ts cl dl sc tm ps od) =
     indent :: Text
     indent = T.replicate (depth + 1) " "
 
-    -- | Timestamps can appear in one of four configurations:
-    --
-    -- 1. None.
-    -- 2. Just a "CLOSED" if it were from a TODO without a deadline.
-    -- 3. Just a "DEADLINE" if it is yet to be complete.
-    -- 4. "CLOSED" first then "DEADLINE" if it were an assigned, completed task.
-    time :: Maybe Text
-    time = case (cl, dl) of
-      (Nothing, Nothing) -> Nothing
-      (Just x, Nothing)  -> Just $ indent <> cl' x
-      (Nothing, Just y)  -> Just $ indent <> dl' y
-      (Just x, Just y)   -> Just $ indent <> cl' x <> " " <> dl' y
+    -- | The order of "special" timestamps is CLOSED, DEADLINE, then SCHEDULED.
+    -- Any permutation of these may appear.
+    stamps :: Maybe Text
+    stamps = case catMaybes [fmap cl' cl, fmap dl' dl, fmap sc' sc] of
+      [] -> Nothing
+      xs -> Just $ indent <> T.intercalate " " xs
 
     cl' :: OrgDateTime -> Text
     cl' x = "CLOSED: [" <> prettyDateTime x <> "]"
 
     dl' :: OrgDateTime -> Text
     dl' x = "DEADLINE: <" <> prettyDateTime x <> ">"
+
+    sc' :: OrgDateTime -> Text
+    sc' x = "SCHEDULED: " <> time x
+
+    time :: OrgDateTime -> Text
+    time x = "<" <> prettyDateTime x <> ">"
 
     props :: Maybe Text
     props
