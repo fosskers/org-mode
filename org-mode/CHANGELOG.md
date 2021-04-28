@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-This release sees the extension of this library to understand heading timestamps
-and `PROPERTIES` drawers.
+This release sees the extension of this library to understand heading
+timestamps, TODOs, priorities, and `PROPERTIES` drawers.
 
 #### Added
 
