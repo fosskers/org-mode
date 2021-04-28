@@ -2,13 +2,19 @@
 
 ## Unreleased
 
+This release sees the extension of this library to understand heading timestamps
+and `PROPERTIES` drawers.
+
 #### Added
 
+- A number of new timestamp types.
+- `Ord` instances for every type.
 - Functions `allDocTags` and `allSectionTags` for extracting unique `Set`s of
   recursive heading tags.
 
 #### Changed
 
+- **Breaking:** `Section` has several new fields involving timestamps and properties.
 - **Breaking:** The `Tags` variant has been removed from the `Words` type.
 
 #### Fixed
