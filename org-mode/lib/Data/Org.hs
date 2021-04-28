@@ -71,7 +71,7 @@ import           Data.Semigroup (sconcat)
 import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time (Day, TimeOfDay)
+import           Data.Time (Day, TimeOfDay(..), showGregorian)
 import           Data.Time.Calendar (DayOfWeek)
 import           Data.Void (Void)
 import           GHC.Generics (Generic)
@@ -79,6 +79,7 @@ import           System.FilePath (takeExtension)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
+import           Text.Printf (printf)
 
 --------------------------------------------------------------------------------
 -- Types
@@ -166,6 +167,7 @@ data OrgDateTime = OrgDateTime
   , dateDayOfWeek :: DayOfWeek
   , dateTime      :: Maybe OrgTime
   , dateRepeat    :: Maybe Repeater }
+  deriving stock (Eq, Show)
 
 -- | The time portion of the full timestamp. May be a range, as seen in the
 -- following full timestamp:
@@ -176,6 +178,7 @@ data OrgDateTime = OrgDateTime
 data OrgTime = OrgTime
   { timeStart :: TimeOfDay
   , timeEnd   :: Maybe TimeOfDay }
+  deriving stock (Eq, Show)
 
 -- | An indication of how often a timestamp should be automatically reapplied in
 -- the Org Agenda.
@@ -183,12 +186,15 @@ data Repeater = Repeater
   { repDirection :: TimeDirection
   , repValue     :: Word
   , repInterval  :: Interval }
+  deriving stock (Eq, Show)
 
 -- | Is the `Repeater` value an offset into the past or future?
 data TimeDirection = Past | Future
+  deriving stock (Eq, Show)
 
 -- | The timestamp repitition unit.
 data Interval = Day | Week | Month | Year
+  deriving stock (Eq, Show)
 
 -- | A subsection, marked by a heading line and followed recursively by an
 -- `OrgDoc`.
@@ -201,8 +207,8 @@ data Interval = Day | Week | Month | Year
 data Section = Section
   { sectionHeading  :: NonEmpty Words
   , sectionTags     :: [Text]
-  , sectionClosed   :: Maybe Text  -- TODO Use a time type.
-  , sectionDeadline :: Maybe Text -- TODO Here too.
+  , sectionClosed   :: Maybe OrgDateTime
+  , sectionDeadline :: Maybe OrgDateTime
   , sectionProps    :: M.Map Text Text
   , sectionDoc      :: OrgDoc }
   deriving stock (Eq, Show, Generic)
@@ -328,7 +334,7 @@ section depth = L.lexeme space $ do
   void space
   Section ws ts cl dl props <$> orgP' (succ depth)
 
-timestamps :: Parser (Maybe Text, Maybe Text)
+timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime)
 timestamps = do
   void newline
   void hspace
@@ -339,15 +345,17 @@ timestamps = do
     (Nothing, Nothing) -> failure Nothing mempty
     _                  -> pure (mc, md)
 
-closed :: Parser Text
+closed :: Parser OrgDateTime
 closed = do
   void $ string "CLOSED: "
-  between (char '[') (char ']') (someTill' ']')  -- TODO What if newline?
+  undefined
+  -- between (char '[') (char ']') (someTill' ']')  -- TODO What if newline?
 
-deadline :: Parser Text
+deadline :: Parser OrgDateTime
 deadline = do
   void $ string "DEADLINE: "
-  between (char '<') (char '>') (someTill' '>')  -- TODO What if newline?
+  undefined
+  -- between (char '<') (char '>') (someTill' '>')  -- TODO What if newline?
 
 properties :: Parser (M.Map Text Text)
 properties = do
@@ -569,11 +577,11 @@ prettySection depth (Section ws ts cl dl ps od) =
       (Nothing, Just y)  -> Just $ indent <> dl' y
       (Just x, Just y)   -> Just $ indent <> cl' x <> " " <> dl' y
 
-    cl' :: Text -> Text
-    cl' x = "CLOSED: [" <> x <> "]"
+    cl' :: OrgDateTime -> Text
+    cl' x = "CLOSED: [" <> prettyDateTime x <> "]"
 
-    dl' :: Text -> Text
-    dl' x = "DEADLINE: <" <> x <> ">"
+    dl' :: OrgDateTime -> Text
+    dl' x = "DEADLINE: <" <> prettyDateTime x <> ">"
 
     props :: Maybe Text
     props
@@ -585,6 +593,37 @@ prettySection depth (Section ws ts cl dl ps od) =
 
     subdoc :: Text
     subdoc = prettyOrg' (succ depth) od
+
+prettyDateTime :: OrgDateTime -> Text
+prettyDateTime (OrgDateTime d w t r) =
+  T.intercalate " " $ catMaybes [ Just d', Just w', fmap prettyTime t, fmap prettyRepeat r ]
+  where
+    d' :: Text
+    d' = T.pack $ showGregorian d
+
+    w' :: Text
+    w' = T.pack . take 3 $ show w
+
+prettyTime :: OrgTime -> Text
+prettyTime (OrgTime s me) = tod s <> maybe "" (\e -> "-" <> tod e) me
+  where
+    tod :: TimeOfDay -> Text
+    tod (TimeOfDay h m _) = T.pack $ printf "%02d:%02d" h m
+
+prettyRepeat :: Repeater -> Text
+prettyRepeat (Repeater d v i) = d' <> T.pack (show v) <> i'
+  where
+    d' :: Text
+    d' = case d of
+      Past   -> "-"
+      Future -> "+"
+
+    i' :: Text
+    i' = case i of
+      Day   -> "d"
+      Week  -> "w"
+      Month -> "m"
+      Year  -> "y"
 
 prettyBlock :: Block -> Text
 prettyBlock o = case o of
