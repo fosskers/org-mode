@@ -52,6 +52,10 @@ module Data.Org
   , table
   , list
   , line
+  , timestamp
+  , date
+  , timeRange
+  , repeater
     -- * Pretty Printing
   , prettyOrgFile
   , prettyOrg
@@ -71,13 +75,14 @@ import           Data.Semigroup (sconcat)
 import qualified Data.Set as S
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time (Day, TimeOfDay(..), showGregorian)
-import           Data.Time.Calendar (DayOfWeek)
+import           Data.Time (Day, TimeOfDay(..), fromGregorian, showGregorian)
+import           Data.Time.Calendar (DayOfWeek(..))
 import           Data.Void (Void)
 import           GHC.Generics (Generic)
 import           System.FilePath (takeExtension)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
+import           Text.Megaparsec.Char.Lexer (decimal)
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Text.Printf (printf)
 
@@ -348,14 +353,57 @@ timestamps = do
 closed :: Parser OrgDateTime
 closed = do
   void $ string "CLOSED: "
-  undefined
-  -- between (char '[') (char ']') (someTill' ']')  -- TODO What if newline?
+  between (char '[') (char ']') timestamp
 
 deadline :: Parser OrgDateTime
 deadline = do
   void $ string "DEADLINE: "
-  undefined
-  -- between (char '<') (char '>') (someTill' '>')  -- TODO What if newline?
+  between (char '<') (char '>') timestamp
+
+timestamp :: Parser OrgDateTime
+timestamp = OrgDateTime
+  <$> date
+  <*> (hspace1 *> dow)
+  <*> optional (try $ hspace1 *> timeRange)
+  <*> optional (hspace1 *> repeater)
+
+date :: Parser Day
+date = do
+  y <- decimal
+  void $ char '-'
+  m <- decimal
+  void $ char '-'
+  d <- decimal
+  pure $ fromGregorian y m d
+
+dow :: Parser DayOfWeek
+dow = choice
+  [ Monday    <$ string "Mon"
+  , Tuesday   <$ string "Tue"
+  , Wednesday <$ string "Wed"
+  , Thursday  <$ string "Thu"
+  , Friday    <$ string "Fri"
+  , Saturday  <$ string "Sat"
+  , Sunday    <$ string "Sun" ]
+
+timeRange :: Parser OrgTime
+timeRange = OrgTime <$> t <*> optional (char '-' *> t)
+  where
+    t :: Parser TimeOfDay
+    t = do
+      h <- decimal
+      void $ char ':'
+      m <- decimal
+      s <- optional $ do
+        void $ char ':'
+        decimal
+      pure $ TimeOfDay h m (fromMaybe 0 s)
+
+repeater :: Parser Repeater
+repeater = Repeater
+  <$> choice [ char '-' $> Past, char '+' $> Future ]
+  <*> decimal
+  <*> choice [ char 'd' $> Day, char 'w' $> Week, char 'm' $> Month, char 'y' $> Year ]
 
 properties :: Parser (M.Map Text Text)
 properties = do

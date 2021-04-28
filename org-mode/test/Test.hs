@@ -138,6 +138,37 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Line - Dummy markup symbol" $ testPretty (line '\n') "Line" "A ~ B"
       [Plain "A", Plain "~", Plain "B"]
     ]
+  , testGroup "Timestamps"
+    [ testCase "Repeater" $ testPretty repeater "Repeater" "+2w" (Repeater Future 2 Week)
+    , testCase "Time - Morning" $ testPretty timeRange "Time" "09:30" (OrgTime (TimeOfDay 9 30 0) Nothing)
+    , testCase "Time - Afternoon" $ testPretty timeRange "Time" "14:30" (OrgTime (TimeOfDay 14 30 0) Nothing)
+    , testCase "Time - Range" $ testPretty timeRange "Time" "09:30-14:30" (OrgTime (TimeOfDay 9 30 0) (Just (TimeOfDay 14 30 0)))
+    , testCase "Date" $ testPretty date "Date" "2021-04-27" $ fromGregorian 2021 4 27
+    , testCase "Timestamp - No time" $ testPretty timestamp "Stamp" "2021-04-27 Tue"
+      $ OrgDateTime
+      { dateDay = fromGregorian 2021 4 27
+      , dateDayOfWeek = Tuesday
+      , dateTime = Nothing
+      , dateRepeat = Nothing }
+    , testCase "Timestamp - Time" $ testPretty timestamp "Stamp" "2021-04-27 Tue 09:30"
+      $ OrgDateTime
+      { dateDay = fromGregorian 2021 4 27
+      , dateDayOfWeek = Tuesday
+      , dateTime = Just $ OrgTime (TimeOfDay 9 30 0) Nothing
+      , dateRepeat = Nothing }
+    , testCase "Timestamp - Repeat" $ testPretty timestamp "Stamp" "2021-04-27 Tue +2w"
+      $ OrgDateTime
+      { dateDay = fromGregorian 2021 4 27
+      , dateDayOfWeek = Tuesday
+      , dateTime = Nothing
+      , dateRepeat = Just $ Repeater Future 2 Week }
+    , testCase "Timestamp - Time and Repeat" $ testPretty timestamp "Stamp" "2021-04-27 Tue 09:30 +2w"
+      $ OrgDateTime
+      { dateDay = fromGregorian 2021 4 27
+      , dateDayOfWeek = Tuesday
+      , dateTime = Just $ OrgTime (TimeOfDay 9 30 0) Nothing
+      , dateRepeat = Just $ Repeater Future 2 Week }
+    ]
   , testGroup "Composite Structures"
     [ testCase "Example" $ parseMaybe orgP "#+begin_example\nHi!\n\nHo\n#+end_example"
       @?= Just (OrgDoc [Example "Hi!\n\nHo"] [])
