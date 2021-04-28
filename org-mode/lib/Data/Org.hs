@@ -354,16 +354,14 @@ section depth = L.lexeme space $ do
   -- Fail if we've found a parent heading --
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
-  (cl, dl, sc) <- fromMaybe (Nothing, Nothing, Nothing) <$> optional (try timestamps)
+  (cl, dl, sc) <- fromMaybe (Nothing, Nothing, Nothing) <$> optional (try $ newline *> hspace *> timestamps)
   tm <- optional (try $ newline *> hspace *> stamp)
-  props <- fromMaybe mempty <$> optional (try properties)
+  props <- fromMaybe mempty <$> optional (try $ newline *> hspace *> properties)
   void space
-  Section ws ts cl dl sc tm props <$> orgP' (succ depth) -- TODO
+  Section ws ts cl dl sc tm props <$> orgP' (succ depth)
 
 timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime, Maybe OrgDateTime)
 timestamps = do
-  void newline
-  void hspace
   mc <- optional closed
   void hspace
   md <- optional deadline
@@ -427,17 +425,14 @@ repeater = Repeater
 
 properties :: Parser (M.Map Text Text)
 properties = do
-  void newline
-  void hspace
   void $ string ":PROPERTIES:"
   void newline
   void hspace
-  ps <- (property <* newline <* hspace) `manyTill` string ":END:"
+  ps <- (hspace *> property <* newline <* hspace) `manyTill` string ":END:"
   pure $ M.fromList ps
 
 property :: Parser (Text, Text)
 property = do
-  void hspace
   void $ char ':'
   key <- someTill' ':' -- TODO Newlines?
   void $ char ':'
