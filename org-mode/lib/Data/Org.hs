@@ -630,20 +630,22 @@ prettyOrg' depth (OrgDoc bs ss) =
 prettySection :: Int -> Section -> Text
 prettySection depth (Section td pr ws ts cl dl sc tm ps od) =
   T.intercalate "\n" $ catMaybes
-  [ T.pack . show <$> td
-  , priority <$> pr
-  , Just headig
+  [ Just headig
   , stamps
   , time <$> tm
   , props
   , Just subdoc ]
   where
+    pr' :: Priority -> Text
+    pr' (Priority t) = "[#" <> t <> "]"
+
     -- TODO There is likely a punctuation bug here.
     --
     -- Sun Apr 25 09:59:01 AM PDT 2021: I wish you had elaborated.
     headig = T.unwords
       $ T.replicate depth "*"
-      : NEL.toList (NEL.map prettyWords ws)
+      : catMaybes [ T.pack . show <$> td, pr' <$> pr ]
+      <> NEL.toList (NEL.map prettyWords ws)
       <> bool [":" <> T.intercalate ":" ts <> ":"] [] (null ts)
 
     indent :: Text
@@ -654,7 +656,7 @@ prettySection depth (Section td pr ws ts cl dl sc tm ps od) =
     stamps :: Maybe Text
     stamps = case catMaybes [fmap cl' cl, fmap dl' dl, fmap sc' sc] of
       [] -> Nothing
-      xs -> Just $ indent <> T.intercalate " " xs
+      xs -> Just $ indent <> T.unwords xs
 
     cl' :: OrgDateTime -> Text
     cl' x = "CLOSED: [" <> prettyDateTime x <> "]"
@@ -681,7 +683,7 @@ prettySection depth (Section td pr ws ts cl dl sc tm ps od) =
 
 prettyDateTime :: OrgDateTime -> Text
 prettyDateTime (OrgDateTime d w t r) =
-  T.intercalate " " $ catMaybes [ Just d', Just w', fmap prettyTime t, fmap prettyRepeat r ]
+  T.unwords $ catMaybes [ Just d', Just w', fmap prettyTime t, fmap prettyRepeat r ]
   where
     d' :: Text
     d' = T.pack $ showGregorian d
