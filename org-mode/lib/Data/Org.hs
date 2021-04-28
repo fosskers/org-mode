@@ -223,7 +223,9 @@ data Interval = Day | Week | Month | Year
 -- This is content in the sub ~OrgDoc~.
 -- @
 data Section = Section
-  { sectionHeading   :: NonEmpty Words
+  { sectionTodo      :: Maybe Todo
+  , sectionPriority  :: Maybe Priority
+  , sectionHeading   :: NonEmpty Words
   , sectionTags      :: [Text]
   , sectionClosed    :: Maybe OrgDateTime
   , sectionDeadline  :: Maybe OrgDateTime
@@ -236,11 +238,18 @@ data Section = Section
 
 -- | A mostly empty invoking of a `Section`.
 titled :: Words -> Section
-titled ws = Section (ws:|[]) [] Nothing Nothing Nothing Nothing mempty emptyDoc
+titled ws = Section Nothing Nothing (ws:|[]) [] Nothing Nothing Nothing Nothing mempty emptyDoc
 
 -- | All unique tags with a section and its subsections.
 allSectionTags :: Section -> S.Set Text
-allSectionTags (Section _ sts _ _ _ _ _ doc) = S.fromList sts <> allDocTags doc
+allSectionTags (Section _ _ _ sts _ _ _ _ _ doc) = S.fromList sts <> allDocTags doc
+
+-- | The completion state of a heading that is considered a "todo" item.
+data Todo = TODO | DONE
+  deriving stock (Eq, Ord, Show, Generic)
+
+newtype Priority = Priority { priority :: Text }
+  deriving stock (Eq, Ord, Show, Generic)
 
 -- | An org list constructed of @-@ characters.
 --
@@ -358,7 +367,7 @@ section depth = L.lexeme space $ do
   tm <- optional (try $ newline *> hspace *> stamp)
   props <- fromMaybe mempty <$> optional (try $ newline *> hspace *> properties)
   void space
-  Section ws ts cl dl sc tm props <$> orgP' (succ depth)
+  Section Nothing Nothing ws ts cl dl sc tm props <$> orgP' (succ depth) -- TODO
 
 timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime, Maybe OrgDateTime)
 timestamps = do
@@ -613,8 +622,15 @@ prettyOrg' depth (OrgDoc bs ss) =
   T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
 
 prettySection :: Int -> Section -> Text
-prettySection depth (Section ws ts cl dl sc tm ps od) =
-  T.intercalate "\n" $ catMaybes [Just headig, stamps, time <$> tm, props, Just subdoc]
+prettySection depth (Section td pr ws ts cl dl sc tm ps od) =
+  T.intercalate "\n" $ catMaybes
+  [ T.pack . show <$> td
+  , priority <$> pr
+  , Just headig
+  , stamps
+  , time <$> tm
+  , props
+  , Just subdoc ]
   where
     -- TODO There is likely a punctuation bug here.
     --

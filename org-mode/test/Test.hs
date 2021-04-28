@@ -113,7 +113,7 @@ suite simple full = testGroup "Unit Tests"
                              , dateDayOfWeek = Monday
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
                              , dateRepeat = Nothing }
-        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) (Just dl) Nothing Nothing mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
+        in OrgDoc [] [ Section Nothing Nothing [Plain "A"] [] (Just cl) (Just dl) Nothing Nothing mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
 
     , testCase "Header - Empty Properties Drawer"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :END:"
