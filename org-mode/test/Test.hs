@@ -43,6 +43,21 @@ suite simple full = testGroup "Unit Tests"
       [ (titled (Plain "A")) { sectionDoc = OrgDoc [Paragraph [Plain "D"]] [ titled (Plain "B") ] }
       , titled (Plain "C") ]
 
+    , testCase "Header - TODO"
+      $ testPretty orgP "Header" "* TODO A"
+      $ OrgDoc []
+      [ (titled (Plain "A")) { sectionTodo = Just TODO }]
+
+    , testCase "Header - Priority"
+      $ testPretty orgP "Header" "* [#A] A"
+      $ OrgDoc []
+      [ (titled (Plain "A")) { sectionPriority = Just $ Priority "A" }]
+
+    , testCase "Header - TODO + Priority"
+      $ testPretty orgP "Header" "* TODO [#A] A"
+      $ OrgDoc []
+      [ (titled (Plain "A")) { sectionTodo = Just TODO, sectionPriority = Just $ Priority "A" }]
+
     , testCase "Header - One line, single tag"
       $ testPretty orgP "Header" "* A  :this:"
       $ OrgDoc [] [ (titled (Plain "A")) { sectionTags = ["this"] } ]

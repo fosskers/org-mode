@@ -31,6 +31,8 @@ module Data.Org
   , Section(..)
   , titled
   , allSectionTags
+  , Todo(..)
+  , Priority(..)
   , Block(..)
   , Words(..)
   , ListItems(..)
@@ -349,17 +351,17 @@ orgP' depth = L.lexeme space $ OrgDoc
       , paragraph ]  -- TODO Paragraph needs to fail if it detects a heading.
 
 -- | If a line starts with @*@ and a space, it is a `Section` heading.
-heading :: Parser (T.Text, NonEmpty Words, [Text])
+heading :: Parser (T.Text, Maybe Todo, Maybe Priority, NonEmpty Words, [Text])
 heading = do
   stars <- someOf '*' <* char ' '
-  (ws, mts) <- headerLine
+  (mtd, mpr, ws, mts) <- headerLine
   case mts of
-    Nothing -> pure (stars, ws, [])
-    Just ts -> pure (stars, ws, NEL.toList ts)
+    Nothing -> pure (stars, mtd, mpr, ws, [])
+    Just ts -> pure (stars, mtd, mpr, ws, NEL.toList ts)
 
 section :: Int -> Parser Section
 section depth = L.lexeme space $ do
-  (stars, ws, ts) <- heading
+  (stars, td, pr, ws, ts) <- heading
   -- Fail if we've found a parent heading --
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
@@ -367,7 +369,7 @@ section depth = L.lexeme space $ do
   tm <- optional (try $ newline *> hspace *> stamp)
   props <- fromMaybe mempty <$> optional (try $ newline *> hspace *> properties)
   void space
-  Section Nothing Nothing ws ts cl dl sc tm props <$> orgP' (succ depth) -- TODO
+  Section td pr ws ts cl dl sc tm props <$> orgP' (succ depth)
 
 timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime, Maybe OrgDateTime)
 timestamps = do
@@ -532,11 +534,15 @@ paragraph = L.lexeme space $ do
   notFollowedBy heading
   Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
 
-headerLine :: Parser (NonEmpty Words, Maybe (NonEmpty Text))
+headerLine :: Parser (Maybe Todo, Maybe Priority, NonEmpty Words, Maybe (NonEmpty Text))
 headerLine = do
+  td <- optional . try $ (string "TODO" $> TODO) <|> (string "DONE" $> DONE)
+  void hspace
+  pr <- optional . try . fmap Priority $ between (char '[') (char ']') (char '#' *> someTill' ']')
+  void hspace
   ws <- (wordChunk '\n' <* hspace) `someTill` lookAhead (void tags <|> void (char '\n') <|> eof)
   ts <- optional tags
-  pure (ws, ts)
+  pure (td, pr, ws, ts)
 
 line :: Char -> Parser (NonEmpty Words)
 line end = wordChunk end `sepEndBy1` manyOf ' '
