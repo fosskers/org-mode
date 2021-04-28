@@ -29,37 +29,35 @@ main = do
 suite :: T.Text -> T.Text -> TestTree
 suite simple full = testGroup "Unit Tests"
   [ testGroup "Basic Markup"
-    [ testCase "Header" $ parseMaybe (section 1) "* A"
-      @?= Just (Section [Plain "A"] [] Nothing Nothing mempty emptyDoc)
+    [ testCase "Header" $ parseMaybe (section 1) "* A" @?= Just (titled (Plain "A"))
     , testCase "Header - Subsection" $ parseMaybe (section 1) "* A\n** B"
-      @?= Just (Section [Plain "A"] [] Nothing Nothing mempty
-                (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc]))
+      @?= Just ((titled (Plain "A")) { sectionDoc = OrgDoc [] [titled (Plain "B")] })
 
     , testCase "Header - Back again"
       $ testPretty orgP "Header" "* A\n** B\n* C"
-      $ OrgDoc []
-      [ Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc])
-      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
+      $ OrgDoc [] [ (titled (Plain "A")) { sectionDoc = OrgDoc [] [titled (Plain "B")] }, titled (Plain "C") ]
 
     , testCase "Header - Contents"
       $ testPretty orgP "Header" "* A\nD\n\n** B\n* C"  -- TODO Requires an extra newline!
       $ OrgDoc []
-      [ Section [Plain "A"] [] Nothing Nothing mempty (OrgDoc [Paragraph [Plain "D"]] [Section [Plain "B"] [] Nothing Nothing mempty emptyDoc])
-      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
+      [ (titled (Plain "A")) { sectionDoc = OrgDoc [Paragraph [Plain "D"]] [ titled (Plain "B") ] }
+      , titled (Plain "C") ]
 
     , testCase "Header - One line, single tag"
       $ testPretty orgP "Header" "* A  :this:"
-      $ OrgDoc [] [Section [Plain "A"] ["this"] Nothing Nothing mempty emptyDoc]
+      $ OrgDoc [] [ (titled (Plain "A")) { sectionTags = ["this"] } ]
 
     , testCase "Header - One line, multiple tags"
       $ testPretty orgP "Header" "* A  :this:that:"
-      $ OrgDoc [] [Section [Plain "A"] ["this", "that"] Nothing Nothing mempty emptyDoc]
+      $ OrgDoc [] [ (titled (Plain "A")) { sectionTags = ["this", "that"] } ]
 
     , testCase "Header - More Tags"
       $ testPretty orgP "Header" "* A  :this:that:\n** B   :other:\n* C"
       $ OrgDoc []
-      [ Section [Plain "A"] ["this", "that"] Nothing Nothing mempty (OrgDoc [] [Section [Plain "B"] ["other"] Nothing Nothing mempty emptyDoc])
-      , Section [Plain "C"] [] Nothing Nothing mempty emptyDoc ]
+      [ (titled (Plain "A"))
+        { sectionTags = ["this", "that"]
+        , sectionDoc = OrgDoc [] [ (titled (Plain "B")) { sectionTags = ["other"] } ] }
+      , titled (Plain "C") ]
 
     , testCase "Header - CLOSED"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43]"
@@ -67,7 +65,7 @@ suite simple full = testGroup "Unit Tests"
                              , dateDayOfWeek = Monday
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
                              , dateRepeat = Nothing }
-        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) Nothing mempty emptyDoc ]
+        in OrgDoc [] [ (titled (Plain "A")) { sectionClosed = Just cl } ]
 
     , testCase "Header - DEADLINE"
       $ testPretty orgP "Header" "* A\n  DEADLINE: <2021-04-19 Mon>"
@@ -75,7 +73,7 @@ suite simple full = testGroup "Unit Tests"
                              , dateDayOfWeek = Monday
                              , dateTime = Nothing
                              , dateRepeat = Nothing }
-        in OrgDoc [] [ Section [Plain "A"] [] Nothing (Just dl) mempty emptyDoc ]
+        in OrgDoc [] [ (titled (Plain "A")) { sectionDeadline = Just dl } ]
 
     , testCase "Header - CLOSED/DEADLINE"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>"
@@ -87,7 +85,7 @@ suite simple full = testGroup "Unit Tests"
                              , dateDayOfWeek = Monday
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
                              , dateRepeat = Nothing }
-        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) (Just dl) mempty emptyDoc ]
+        in OrgDoc [] [ (titled (Plain "A")) { sectionClosed = Just cl, sectionDeadline = Just dl } ]
 
     , testCase "Header - CLOSED/DEADLINE - More"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43] DEADLINE: <2021-04-19 Mon>\nD"
@@ -99,19 +97,21 @@ suite simple full = testGroup "Unit Tests"
                              , dateDayOfWeek = Monday
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
                              , dateRepeat = Nothing }
-        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) (Just dl) mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
+        in OrgDoc [] [ Section [Plain "A"] [] (Just cl) (Just dl) Nothing Nothing mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
 
     , testCase "Header - Empty Properties Drawer"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :END:"
-      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [] emptyDoc]
+      $ OrgDoc [] [ titled (Plain "A") ]
 
     , testCase "Header - One Property"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :END:\nHi"
-      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack")] (OrgDoc [Paragraph [Plain "Hi"]] []) ]
+      $ OrgDoc [] [ (titled (Plain "A"))
+                    { sectionProps = [("Cat", "Jack")]
+                    , sectionDoc = OrgDoc [Paragraph [Plain "Hi"]] [] }]
 
     , testCase "Header - Two Properties"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :Cat: Jack\n  :Age: 7\n  :END:"
-      $ OrgDoc [] [ Section [Plain "A"] [] Nothing Nothing [("Cat", "Jack"), ("Age", "7")] emptyDoc ]
+      $ OrgDoc [] [ (titled (Plain "A")) { sectionProps = [("Cat", "Jack"), ("Age", "7")] } ]
 
     , testCase "Properties"
       $ testPretty properties "Properties" "\n  :PROPERTIES:\n  :Cat: Jack\n  :END:" [("Cat", "Jack")]
