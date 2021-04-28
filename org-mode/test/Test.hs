@@ -74,6 +74,10 @@ suite simple full = testGroup "Unit Tests"
         , sectionDoc = OrgDoc [] [ (titled (Plain "B")) { sectionTags = ["other"] } ] }
       , titled (Plain "C") ]
 
+    , testCase "Header - Non-tag Smiley"
+      $ testPretty orgP "Header" "* A :)"
+      $ OrgDoc [] [ Section Nothing Nothing [Plain "A", Punct ':', Punct ')'] [] Nothing Nothing Nothing Nothing mempty emptyDoc ]
+
     , testCase "Header - Vanilla Timestamp"
       $ testPretty orgP "Header" "* A\n  <2021-04-19 Mon>"
       $ let tm = OrgDateTime { dateDay = fromGregorian 2021 4 19

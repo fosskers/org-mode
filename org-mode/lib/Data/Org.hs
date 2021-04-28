@@ -540,7 +540,7 @@ headerLine = do
   void hspace
   pr <- optional . try . fmap Priority $ between (char '[') (char ']') (char '#' *> someTill' ']')
   void hspace
-  ws <- (wordChunk '\n' <* hspace) `someTill` lookAhead (void tags <|> void (char '\n') <|> eof)
+  ws <- (wordChunk '\n' <* hspace) `someTill` lookAhead (try $ void tags <|> void (char '\n') <|> eof)
   ts <- optional tags
   pure (td, pr, ws, ts)
 
