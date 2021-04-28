@@ -59,6 +59,14 @@ suite simple full = testGroup "Unit Tests"
         , sectionDoc = OrgDoc [] [ (titled (Plain "B")) { sectionTags = ["other"] } ] }
       , titled (Plain "C") ]
 
+    , testCase "Header - Vanilla Timestamp"
+      $ testPretty orgP "Header" "* A\n  <2021-04-19 Mon>"
+      $ let tm = OrgDateTime { dateDay = fromGregorian 2021 4 19
+                             , dateDayOfWeek = Monday
+                             , dateTime = Nothing
+                             , dateRepeat = Nothing }
+        in OrgDoc [] [ (titled (Plain "A")) { sectionTimestamp = Just tm } ]
+
     , testCase "Header - CLOSED"
       $ testPretty orgP "Header" "* A\n  CLOSED: [2021-04-19 Mon 15:43]"
       $ let cl = OrgDateTime { dateDay = fromGregorian 2021 4 19

@@ -34,11 +34,13 @@ Always keep some cash on hand, you never know.
 #+end_quote
 
 ** DONE Gotta do it
-   CLOSED: [2021-04-25 Sun 19:39] DEADLINE: <2021-04-25 Sun>
+   CLOSED: [2021-04-28 Wed 15:10] DEADLINE: <2021-04-29 Thu> SCHEDULED: <2021-04-28 Wed>
+   <2021-04-25 Sun>
 
 Stuff.
 
 ** Props
+   <2021-04-28 Wed>
    :PROPERTIES:
    :Yes: Fun
    :END:
