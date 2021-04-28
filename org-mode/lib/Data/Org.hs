@@ -355,9 +355,10 @@ section depth = L.lexeme space $ do
   when (T.length stars < depth) $ failure Nothing mempty
   -- Otherwise continue --
   (cl, dl, sc) <- fromMaybe (Nothing, Nothing, Nothing) <$> optional (try timestamps)
+  tm <- optional (try $ newline *> hspace *> stamp)
   props <- fromMaybe mempty <$> optional (try properties)
   void space
-  Section ws ts cl dl sc Nothing props <$> orgP' (succ depth) -- TODO
+  Section ws ts cl dl sc tm props <$> orgP' (succ depth) -- TODO
 
 timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime, Maybe OrgDateTime)
 timestamps = do
@@ -372,20 +373,18 @@ timestamps = do
     (Nothing, Nothing, Nothing) -> failure Nothing mempty
     _                           -> pure (mc, md, ms)
 
+-- | An active timestamp.
+stamp :: Parser OrgDateTime
+stamp = between (char '<') (char '>') timestamp
+
 closed :: Parser OrgDateTime
-closed = do
-  void $ string "CLOSED: "
-  between (char '[') (char ']') timestamp
+closed = string "CLOSED: " *> between (char '[') (char ']') timestamp
 
 deadline :: Parser OrgDateTime
-deadline = do
-  void $ string "DEADLINE: "
-  between (char '<') (char '>') timestamp
+deadline = string "DEADLINE: " *> stamp
 
 scheduled :: Parser OrgDateTime
-scheduled = do
-  void $ string "SCHEDULED: "
-  between (char '<') (char '>') timestamp
+scheduled = string "SCHEDULED: " *> stamp
 
 timestamp :: Parser OrgDateTime
 timestamp = OrgDateTime
