@@ -28,7 +28,7 @@ common commons
     , containers  >=0.6
     , hashable    >=1.2  && <1.4
     , lucid       ^>=2.9
-    , org-mode    ^>=1.2
+    , org-mode    ^>=2.0
     , text
 
 library
