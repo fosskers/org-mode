@@ -444,10 +444,16 @@ repeater :: Parser Repeater
 repeater = Repeater
   <$> choice [ string ".+" $> FromToday, string "++" $> Jump, char '+' $> Single ]
   <*> decimal
-  <*> choice [ char 'h' $> Hour, char 'd' $> Day, char 'w' $> Week, char 'm' $> Month, char 'y' $> Year ]
+  <*> interval
 
 delay :: Parser Delay
-delay = undefined
+delay = Delay
+  <$> choice [ string "--" $> DelayOne, char '-' $> DelayAll ]
+  <*> decimal
+  <*> interval
+
+interval :: Parser Interval
+interval = choice [ char 'h' $> Hour, char 'd' $> Day, char 'w' $> Week, char 'm' $> Month, char 'y' $> Year ]
 
 properties :: Parser (M.Map Text Text)
 properties = do

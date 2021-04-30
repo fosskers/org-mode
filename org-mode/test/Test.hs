@@ -230,12 +230,19 @@ suite simple full = testGroup "Unit Tests"
       , dateTime = Just $ OrgTime (TimeOfDay 9 30 0) Nothing
       , dateRepeat = Nothing
       , dateDelay = Nothing }
-    , testCase "Timestamp - Repeat" $ testPretty timestamp "Stamp" "2021-04-27 Tue +2w"
+    , testCase "Timestamp - Repeat Single" $ testPretty timestamp "Stamp" "2021-04-27 Tue +2w"
       $ OrgDateTime
       { dateDay = fromGregorian 2021 4 27
       , dateDayOfWeek = Tuesday
       , dateTime = Nothing
       , dateRepeat = Just $ Repeater Single 2 Week
+      , dateDelay = Nothing }
+    , testCase "Timestamp - Repeat Jump" $ testPretty timestamp "Stamp" "2021-04-27 Tue ++2w"
+      $ OrgDateTime
+      { dateDay = fromGregorian 2021 4 27
+      , dateDayOfWeek = Tuesday
+      , dateTime = Nothing
+      , dateRepeat = Just $ Repeater Jump 2 Week
       , dateDelay = Nothing }
     , testCase "Timestamp - Time and Repeat" $ testPretty timestamp "Stamp" "2021-04-27 Tue 09:30 +2w"
       $ OrgDateTime
@@ -244,6 +251,20 @@ suite simple full = testGroup "Unit Tests"
       , dateTime = Just $ OrgTime (TimeOfDay 9 30 0) Nothing
       , dateRepeat = Just $ Repeater Single 2 Week
       , dateDelay = Nothing }
+    , testCase "Timestamp - Delay" $ testPretty timestamp "Stamp" "2021-04-27 Tue -3d"
+      $ OrgDateTime
+      { dateDay = fromGregorian 2021 4 27
+      , dateDayOfWeek = Tuesday
+      , dateTime = Nothing
+      , dateRepeat = Nothing
+      , dateDelay = Just $ Delay DelayAll 3 Day }
+    , testCase "Timestamp - Repeat and Delay" $ testPretty timestamp "Stamp" "2021-04-27 Tue +2w -3d"
+      $ OrgDateTime
+      { dateDay = fromGregorian 2021 4 27
+      , dateDayOfWeek = Tuesday
+      , dateTime = Nothing
+      , dateRepeat = Just $ Repeater Single 2 Week
+      , dateDelay = Just $ Delay DelayAll 3 Day }
     ]
   , testGroup "Composite Structures"
     [ testCase "Example" $ parseMaybe orgP "#+begin_example\nHi!\n\nHo\n#+end_example"
