@@ -211,20 +211,29 @@ data Repeater = Repeater
   , repInterval :: Interval }
   deriving stock (Eq, Ord, Show)
 
-data RepeatMode = Single | Jump | FromToday
+-- | The nature of the repitition.
+data RepeatMode
+  = Single     -- ^ Apply the interval value to the original timestamp once: @+@
+  | Jump       -- ^ Apply the interval value as many times as necessary to arrive on a future date: @++@
+  | FromToday  -- ^ Apply the interval value from today: @.+@
   deriving stock (Eq, Ord, Show)
 
 -- | The timestamp repitition unit.
 data Interval = Hour | Day | Week | Month | Year
   deriving stock (Eq, Ord, Show)
 
+-- | Delay the appearance of a timestamp in the agenda.
 data Delay = Delay
   { delayMode     :: DelayMode
   , delayValue    :: Word
   , delayInterval :: Interval }
   deriving stock (Eq, Ord, Show)
 
-data DelayMode = DelayOne | DelayAll
+-- | When a repeater is also present, should the delay be for the first value or
+-- all of them?
+data DelayMode
+  = DelayOne  -- ^ As in: @--2d@
+  | DelayAll  -- ^ As in: @-2d@
   deriving stock (Eq, Ord, Show)
 
 -- | A subsection, marked by a heading line and followed recursively by an
@@ -261,6 +270,12 @@ allSectionTags (Section _ _ _ sts _ _ _ _ _ doc) = S.fromList sts <> allDocTags 
 data Todo = TODO | DONE
   deriving stock (Eq, Ord, Show, Generic)
 
+-- | A priority value, usually associated with a @TODO@ marking, as in:
+--
+-- @
+-- *** TODO [#A] Cure cancer with Haskell
+-- *** TODO [#B] Eat lunch
+-- @
 newtype Priority = Priority { priority :: Text }
   deriving stock (Eq, Ord, Show, Generic)
 

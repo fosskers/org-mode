@@ -41,6 +41,9 @@ Always keep some cash on hand, you never know.
 
 Stuff.
 
+** TODO [#A] Laundry
+   SCHEDULED: <2021-04-30 Fri 13:00 .+1w -1d>
+
 ** Props
    <2021-04-28 Wed>
    :PROPERTIES:
