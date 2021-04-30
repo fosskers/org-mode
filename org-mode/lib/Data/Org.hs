@@ -25,7 +25,9 @@ module Data.Org
   , OrgDateTime(..)
   , OrgTime(..)
   , Repeater(..)
-  , TimeDirection(..)
+  , RepeatMode(..)
+  , Delay(..)
+  , DelayMode(..)
   , Interval(..)
     -- ** Markup
   , Section(..)
@@ -174,13 +176,14 @@ data OrgDateTime = OrgDateTime
   { dateDay       :: Day
   , dateDayOfWeek :: DayOfWeek
   , dateTime      :: Maybe OrgTime
-  , dateRepeat    :: Maybe Repeater }
+  , dateRepeat    :: Maybe Repeater
+  , dateDelay     :: Maybe Delay }
   deriving stock (Eq, Show)
 
 -- | A lack of a specific `OrgTime` is assumed to mean @00:00@, the earliest
 -- possible time for that day.
 instance Ord OrgDateTime where
-  compare (OrgDateTime d0 _ mt0 _) (OrgDateTime d1 _ mt1 _) = case compare d0 d1 of
+  compare (OrgDateTime d0 _ mt0 _ _) (OrgDateTime d1 _ mt1 _ _) = case compare d0 d1 of
     LT -> LT
     GT -> GT
     EQ -> case (mt0, mt1) of
@@ -203,17 +206,25 @@ data OrgTime = OrgTime
 -- | An indication of how often a timestamp should be automatically reapplied in
 -- the Org Agenda.
 data Repeater = Repeater
-  { repDirection :: TimeDirection
-  , repValue     :: Word
-  , repInterval  :: Interval }
+  { repMode     :: RepeatMode
+  , repValue    :: Word
+  , repInterval :: Interval }
   deriving stock (Eq, Ord, Show)
 
--- | Is the `Repeater` value an offset into the past or future?
-data TimeDirection = Past | Future
+data RepeatMode = Single | Jump | FromToday
   deriving stock (Eq, Ord, Show)
 
 -- | The timestamp repitition unit.
-data Interval = Day | Week | Month | Year
+data Interval = Hour | Day | Week | Month | Year
+  deriving stock (Eq, Ord, Show)
+
+data Delay = Delay
+  { delayMode     :: DelayMode
+  , delayValue    :: Word
+  , delayInterval :: Interval }
+  deriving stock (Eq, Ord, Show)
+
+data DelayMode = DelayOne | DelayAll
   deriving stock (Eq, Ord, Show)
 
 -- | A subsection, marked by a heading line and followed recursively by an
@@ -400,7 +411,8 @@ timestamp = OrgDateTime
   <$> date
   <*> (hspace1 *> dow)
   <*> optional (try $ hspace1 *> timeRange)
-  <*> optional (hspace1 *> repeater)
+  <*> optional (try $ hspace1 *> repeater)
+  <*> optional (hspace1 *> delay)
 
 date :: Parser Day
 date = fromGregorian <$> decimal <*> (char '-' *> decimal) <*> (char '-' *> decimal)
@@ -430,9 +442,12 @@ timeRange = OrgTime <$> t <*> optional (char '-' *> t)
 
 repeater :: Parser Repeater
 repeater = Repeater
-  <$> choice [ char '-' $> Past, char '+' $> Future ]
+  <$> choice [ string ".+" $> FromToday, string "++" $> Jump, char '+' $> Single ]
   <*> decimal
-  <*> choice [ char 'd' $> Day, char 'w' $> Week, char 'm' $> Month, char 'y' $> Year ]
+  <*> choice [ char 'h' $> Hour, char 'd' $> Day, char 'w' $> Week, char 'm' $> Month, char 'y' $> Year ]
+
+delay :: Parser Delay
+delay = undefined
 
 properties :: Parser (M.Map Text Text)
 properties = do
@@ -682,8 +697,8 @@ prettySection depth (Section td pr ws ts cl dl sc tm ps od) =
     subdoc = prettyOrg' (succ depth) od
 
 prettyDateTime :: OrgDateTime -> Text
-prettyDateTime (OrgDateTime d w t r) =
-  T.unwords $ catMaybes [ Just d', Just w', fmap prettyTime t, fmap prettyRepeat r ]
+prettyDateTime (OrgDateTime d w t rep del) =
+  T.unwords $ catMaybes [ Just d', Just w', prettyTime <$> t, prettyRepeat <$> rep, prettyDelay <$> del ]
   where
     d' :: Text
     d' = T.pack $ showGregorian d
@@ -698,19 +713,29 @@ prettyTime (OrgTime s me) = tod s <> maybe "" (\e -> "-" <> tod e) me
     tod (TimeOfDay h m _) = T.pack $ printf "%02d:%02d" h m
 
 prettyRepeat :: Repeater -> Text
-prettyRepeat (Repeater d v i) = d' <> T.pack (show v) <> i'
+prettyRepeat (Repeater m v i) = m' <> T.pack (show v) <> prettyInterval i
   where
-    d' :: Text
-    d' = case d of
-      Past   -> "-"
-      Future -> "+"
+    m' :: Text
+    m' = case m of
+      Single    -> "+"
+      Jump      -> "++"
+      FromToday -> ".+"
 
-    i' :: Text
-    i' = case i of
-      Day   -> "d"
-      Week  -> "w"
-      Month -> "m"
-      Year  -> "y"
+prettyDelay :: Delay -> Text
+prettyDelay (Delay m v i) = m' <> T.pack (show v) <> prettyInterval i
+  where
+    m' :: Text
+    m' = case m of
+      DelayOne -> "--"
+      DelayAll -> "-"
+
+prettyInterval :: Interval -> Text
+prettyInterval i = case i of
+  Hour  -> "h"
+  Day   -> "d"
+  Week  -> "w"
+  Month -> "m"
+  Year  -> "y"
 
 prettyBlock :: Block -> Text
 prettyBlock o = case o of

@@ -83,7 +83,8 @@ suite simple full = testGroup "Unit Tests"
       $ let tm = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
         in OrgDoc [] [ (titled (Plain "A")) { sectionTimestamp = Just tm } ]
 
     , testCase "Header - CLOSED"
@@ -91,7 +92,8 @@ suite simple full = testGroup "Unit Tests"
       $ let cl = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
         in OrgDoc [] [ (titled (Plain "A")) { sectionClosed = Just cl } ]
 
     , testCase "Header - DEADLINE"
@@ -99,7 +101,8 @@ suite simple full = testGroup "Unit Tests"
       $ let dl = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
         in OrgDoc [] [ (titled (Plain "A")) { sectionDeadline = Just dl } ]
 
     , testCase "Header - SCHEDULED"
@@ -107,7 +110,8 @@ suite simple full = testGroup "Unit Tests"
       $ let sc = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
         in OrgDoc [] [ (titled (Plain "A")) { sectionScheduled = Just sc } ]
 
     , testCase "Header - CLOSED/DEADLINE"
@@ -115,11 +119,13 @@ suite simple full = testGroup "Unit Tests"
       $ let dl = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
             cl = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
         in OrgDoc [] [ (titled (Plain "A")) { sectionClosed = Just cl, sectionDeadline = Just dl } ]
 
     , testCase "Header - CLOSED/DEADLINE - More"
@@ -127,11 +133,13 @@ suite simple full = testGroup "Unit Tests"
       $ let dl = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
             cl = OrgDateTime { dateDay = fromGregorian 2021 4 19
                              , dateDayOfWeek = Monday
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
-                             , dateRepeat = Nothing }
+                             , dateRepeat = Nothing
+                             , dateDelay = Nothing }
         in OrgDoc [] [ Section Nothing Nothing [Plain "A"] [] (Just cl) (Just dl) Nothing Nothing mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
 
     , testCase "Header - Empty Properties Drawer"
@@ -203,7 +211,7 @@ suite simple full = testGroup "Unit Tests"
       [Plain "A", Plain "~", Plain "B"]
     ]
   , testGroup "Timestamps"
-    [ testCase "Repeater" $ testPretty repeater "Repeater" "+2w" (Repeater Future 2 Week)
+    [ testCase "Repeater" $ testPretty repeater "Repeater" "+2w" (Repeater Single 2 Week)
     , testCase "Time - Morning" $ testPretty timeRange "Time" "09:30" (OrgTime (TimeOfDay 9 30 0) Nothing)
     , testCase "Time - Afternoon" $ testPretty timeRange "Time" "14:30" (OrgTime (TimeOfDay 14 30 0) Nothing)
     , testCase "Time - Range" $ testPretty timeRange "Time" "09:30-14:30" (OrgTime (TimeOfDay 9 30 0) (Just (TimeOfDay 14 30 0)))
@@ -213,25 +221,29 @@ suite simple full = testGroup "Unit Tests"
       { dateDay = fromGregorian 2021 4 27
       , dateDayOfWeek = Tuesday
       , dateTime = Nothing
-      , dateRepeat = Nothing }
+      , dateRepeat = Nothing
+      , dateDelay = Nothing }
     , testCase "Timestamp - Time" $ testPretty timestamp "Stamp" "2021-04-27 Tue 09:30"
       $ OrgDateTime
       { dateDay = fromGregorian 2021 4 27
       , dateDayOfWeek = Tuesday
       , dateTime = Just $ OrgTime (TimeOfDay 9 30 0) Nothing
-      , dateRepeat = Nothing }
+      , dateRepeat = Nothing
+      , dateDelay = Nothing }
     , testCase "Timestamp - Repeat" $ testPretty timestamp "Stamp" "2021-04-27 Tue +2w"
       $ OrgDateTime
       { dateDay = fromGregorian 2021 4 27
       , dateDayOfWeek = Tuesday
       , dateTime = Nothing
-      , dateRepeat = Just $ Repeater Future 2 Week }
+      , dateRepeat = Just $ Repeater Single 2 Week
+      , dateDelay = Nothing }
     , testCase "Timestamp - Time and Repeat" $ testPretty timestamp "Stamp" "2021-04-27 Tue 09:30 +2w"
       $ OrgDateTime
       { dateDay = fromGregorian 2021 4 27
       , dateDayOfWeek = Tuesday
       , dateTime = Just $ OrgTime (TimeOfDay 9 30 0) Nothing
-      , dateRepeat = Just $ Repeater Future 2 Week }
+      , dateRepeat = Just $ Repeater Single 2 Week
+      , dateDelay = Nothing }
     ]
   , testGroup "Composite Structures"
     [ testCase "Example" $ parseMaybe orgP "#+begin_example\nHi!\n\nHo\n#+end_example"
