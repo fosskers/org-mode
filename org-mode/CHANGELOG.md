@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.0 (2021-06-04)
 
 This release sees the extension of this library to understand heading
 timestamps, TODOs, priorities, and `PROPERTIES` drawers.
