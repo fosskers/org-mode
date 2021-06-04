@@ -1,6 +1,6 @@
-resolver: lts-17.10
+resolver: lts-17.14
 
-ghc-options: {"$locals": -fwrite-ide-info -fmax-relevant-binds=0}
+ghc-options: { "$locals": -fwrite-ide-info -fmax-relevant-binds=0 }
 
 packages:
   - org-mode
