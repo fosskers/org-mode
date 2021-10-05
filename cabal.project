@@ -1,0 +1,3 @@
+packages:
+  org-mode/*.cabal
+  org-mode-lucid/*.cabal
