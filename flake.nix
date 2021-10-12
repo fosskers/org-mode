@@ -196,7 +196,6 @@
             ];
           };
 
-          defaultPackage = packages."${name}:exe:bk";
         }
         ));
 }
