@@ -21,13 +21,15 @@ main :: IO ()
 main = do
   simple <- T.readFile "test/simple.org"
   full   <- T.readFile "test/test.org"
+  clocks <- T.readFile "test/clocks.org"
+--  clocks <- T.readFile "test/simple-clock.org"
   -- let fl = parseMaybe orgFile full
   -- pPrintNoColor fl
   -- maybe (putStrLn "COULDN'T PARSE") T.putStrLn $ prettyOrgFile <$> fl
-  defaultMain $ suite simple full
+  defaultMain $ suite simple full clocks
 
-suite :: T.Text -> T.Text -> TestTree
-suite simple full = testGroup "Unit Tests"
+suite :: T.Text -> T.Text -> T.Text -> TestTree
+suite simple full clocks = testGroup "Unit Tests"
   [ testGroup "Basic Markup"
     [ testCase "Header" $ parseMaybe (section 1) "* A" @?= Just (titled (Plain "A"))
     , testCase "Header - Subsection" $ parseMaybe (section 1) "* A\n** B"
@@ -76,7 +78,7 @@ suite simple full = testGroup "Unit Tests"
 
     , testCase "Header - Non-tag Smiley"
       $ testPretty orgP "Header" "* A :)"
-      $ OrgDoc [] [ Section Nothing Nothing [Plain "A", Punct ':', Punct ')'] [] Nothing Nothing Nothing Nothing mempty emptyDoc ]
+      $ OrgDoc [] [ Section Nothing Nothing [Plain "A", Punct ':', Punct ')'] [] Nothing Nothing Nothing Nothing mempty mempty emptyDoc ]
 
     , testCase "Header - Vanilla Timestamp"
       $ testPretty orgP "Header" "* A\n  <2021-04-19 Mon>"
@@ -140,7 +142,7 @@ suite simple full = testGroup "Unit Tests"
                              , dateTime = Just $ OrgTime (TimeOfDay 15 43 0) Nothing
                              , dateRepeat = Nothing
                              , dateDelay = Nothing }
-        in OrgDoc [] [ Section Nothing Nothing [Plain "A"] [] (Just cl) (Just dl) Nothing Nothing mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
+        in OrgDoc [] [ Section Nothing Nothing [Plain "A"] [] (Just cl) (Just dl) Nothing Nothing mempty mempty (OrgDoc [ Paragraph [Plain "D"]] []) ]
 
     , testCase "Header - Empty Properties Drawer"
       $ testPretty orgP "Header" "* A\n  :PROPERTIES:\n  :END:"
@@ -265,7 +267,39 @@ suite simple full = testGroup "Unit Tests"
       , dateTime = Nothing
       , dateRepeat = Just $ Repeater Single 2 Week
       , dateDelay = Just $ Delay DelayAll 3 Day }
+    , testCase "Logbook - Log Entry" $ testPretty logentry "Log Entry" "CLOCK: [2021-10-12 Tue 08:00]--[2021-10-12 Tue 08:01] => 0:01"
+      $ ( OrgDateTime
+          { dateDay = fromGregorian 2021 10 12
+          , dateDayOfWeek = Tuesday
+          , dateTime = Just $ OrgTime (TimeOfDay 8 00 0) Nothing
+          , dateRepeat = Nothing
+          , dateDelay = Nothing }
+        , Just $ ( OrgDateTime
+          { dateDay = fromGregorian 2021 10 12
+          , dateDayOfWeek = Tuesday
+          , dateTime = Just $ OrgTime (TimeOfDay 8 01 0) Nothing
+          , dateRepeat = Nothing
+          , dateDelay = Nothing }
+        , Just (TimeOfDay 0 01 0)
+        ))
+    , testCase "Logbook - Single Entry Book" $ testPretty logbook "Log Book" ":LOGBOOK:\nCLOCK: [2021-10-12 Tue 08:00]--[2021-10-12 Tue 08:01] => 0:01\n:END:"
+      $ [( OrgDateTime
+          { dateDay = fromGregorian 2021 10 12
+          , dateDayOfWeek = Tuesday
+          , dateTime = Just $ OrgTime (TimeOfDay 8 00 0) Nothing
+          , dateRepeat = Nothing
+          , dateDelay = Nothing }
+        , Just $ ( OrgDateTime
+          { dateDay = fromGregorian 2021 10 12
+          , dateDayOfWeek = Tuesday
+          , dateTime = Just $ OrgTime (TimeOfDay 8 01 0) Nothing
+          , dateRepeat = Nothing
+          , dateDelay = Nothing }
+        , Just (TimeOfDay 0 01 0)
+        ))]
+
     ]
+
   , testGroup "Composite Structures"
     [ testCase "Example" $ parseMaybe orgP "#+begin_example\nHi!\n\nHo\n#+end_example"
       @?= Just (OrgDoc [Example "Hi!\n\nHo"] [])
@@ -356,6 +390,11 @@ suite simple full = testGroup "Unit Tests"
     , testCase "Full" $ case parse orgFile "test.org" full of
         Left eb -> assertFailure $ errorBundlePretty eb
         Right r -> case parse orgFile "test.org - reparse" (prettyOrgFile r) of
+          Left eb' -> assertFailure $ errorBundlePretty eb'
+          Right r' -> r' @?= r
+    , testCase "Clocks" $ case parse orgFile "clocks.org" clocks of
+        Left eb -> assertFailure $ errorBundlePretty eb
+        Right r -> case parse orgFile "clocks.org - reparse" (prettyOrgFile r) of
           Left eb' -> assertFailure $ errorBundlePretty eb'
           Right r' -> r' @?= r
     , testCase "Full: Tag Extraction"
