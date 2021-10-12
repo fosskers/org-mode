@@ -1,0 +1,48 @@
+#+TITLE: Clocks
+* standard clock
+:LOGBOOK:
+CLOCK: [2021-10-12 Tue 08:00]--[2021-10-12 Tue 08:01] =>  0:01
+:END:
+* clocks can be less than one minute
+:LOGBOOK:
+CLOCK: [2021-10-12 Tue 07:00]--[2021-10-12 Tue 07:00] =>  0:00
+:END:
+* clocks can be on any heading
+:LOGBOOK:
+CLOCK: [2021-10-10 Mon 15:00]--[2021-10-12 Tue 06:15] => 39:15
+:END:
+** clocks can be on nested children
+:LOGBOOK:
+CLOCK: [2021-10-10 Mon 14:00]--[2021-10-10 Mon 15:00] =>  1:00
+:END:
+* computed times may not reflect the truth
+:LOGBOOK:
+CLOCK: [2021-10-01 Mon 14:00]--[2021-10-01 Mon 15:00] => 40:16
+:END:
+* computed times may not exist
+:LOGBOOK:
+CLOCK: [2021-10-01 Mon 14:00]--[2021-10-01 Mon 15:00]
+:END:
+* many entries can exist
+:LOGBOOK:
+CLOCK: [2021-10-02 Mon 16:00]--[2021-10-02 Mon 17:00] =>  1:00
+CLOCK: [2021-10-02 Mon 15:00]--[2021-10-02 Mon 16:00] =>  1:00
+CLOCK: [2021-10-02 Mon 14:00]--[2021-10-02 Mon 15:00] =>  1:00
+:END:
+* entries can overlap
+:LOGBOOK:
+CLOCK: [2021-10-03 Mon 14:30]--[2021-10-03 Mon 16:00] =>  1:30
+CLOCK: [2021-10-03 Mon 14:00]--[2021-10-03 Mon 15:30] =>  1:30
+:END:
+* children may overlap with parents
+:LOGBOOK:
+CLOCK: [2021-10-04 Mon 14:30]--[2021-10-04 Mon 16:00] =>  1:30
+:END:
+** child
+:LOGBOOK:
+CLOCK: [2021-10-04 Mon 14:00]--[2021-10-04 Mon 15:30] =>  1:30
+:END:
+* clocks may be clocked in
+:LOGBOOK:
+CLOCK: [2021-10-05 Mon 14:30]
+:END:

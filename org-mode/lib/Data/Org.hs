@@ -58,6 +58,8 @@ module Data.Org
   , list
   , line
   , timestamp
+  , logentry
+  , logbook
   , date
   , timeRange
   , repeater
@@ -154,7 +156,7 @@ data Block
 -- @
 -- \<2021-04-27 Tue\>
 -- @
---
+
 -- but also may contain a time:
 --
 -- @
@@ -254,17 +256,18 @@ data Section = Section
   , sectionScheduled :: Maybe OrgDateTime
   , sectionTimestamp :: Maybe OrgDateTime
     -- ^ A timestamp for general events that are neither a DEADLINE nor SCHEDULED.
+  , sectionLogbook   :: [(OrgDateTime, Maybe (OrgDateTime, Maybe TimeOfDay))]
   , sectionProps     :: M.Map Text Text
   , sectionDoc       :: OrgDoc }
   deriving stock (Eq, Ord, Show, Generic)
 
 -- | A mostly empty invoking of a `Section`.
 titled :: Words -> Section
-titled ws = Section Nothing Nothing (ws:|[]) [] Nothing Nothing Nothing Nothing mempty emptyDoc
+titled ws = Section Nothing Nothing (ws:|[]) [] Nothing Nothing Nothing Nothing mempty mempty emptyDoc
 
 -- | All unique tags with a section and its subsections.
 allSectionTags :: Section -> S.Set Text
-allSectionTags (Section _ _ _ sts _ _ _ _ _ doc) = S.fromList sts <> allDocTags doc
+allSectionTags (Section _ _ _ sts _ _ _ _ _ _ doc) = S.fromList sts <> allDocTags doc
 
 -- | The completion state of a heading that is considered a "todo" item.
 data Todo = TODO | DONE
@@ -394,8 +397,10 @@ section depth = L.lexeme space $ do
   (cl, dl, sc) <- fromMaybe (Nothing, Nothing, Nothing) <$> optional (try $ newline *> hspace *> timestamps)
   tm <- optional (try $ newline *> hspace *> stamp)
   props <- fromMaybe mempty <$> optional (try $ newline *> hspace *> properties)
+  -- FIXME: properties can appear after logbooks
+  logs <- fromMaybe mempty <$> optional (try $ newline *> space *> logbook)
   void space
-  Section td pr ws ts cl dl sc tm props <$> orgP' (succ depth)
+  Section td pr ws ts cl dl sc tm logs props <$> orgP' (succ depth)
 
 timestamps :: Parser (Maybe OrgDateTime, Maybe OrgDateTime, Maybe OrgDateTime)
 timestamps = do
@@ -421,6 +426,24 @@ deadline = string "DEADLINE: " *> stamp
 scheduled :: Parser OrgDateTime
 scheduled = string "SCHEDULED: " *> stamp
 
+logbook :: Parser [(OrgDateTime, Maybe (OrgDateTime, Maybe TimeOfDay))]
+logbook = do
+  void $ string ":LOGBOOK:"
+  void newline
+  void hspace
+  (hspace *> logentry <* newline <* hspace) `manyTill` string ":END:"
+
+logentry :: Parser (OrgDateTime, Maybe (OrgDateTime, Maybe TimeOfDay))
+logentry = do
+  void $ string "CLOCK:" *> hspace
+  start <- fixedTime
+  mend <- optional $ (,)
+    <$> (string "--" *> fixedTime)
+    <*> optional (hspace *> string "=>" *> hspace *> timeOfDay)
+  pure (start, mend)
+  where
+    fixedTime = between (char '[') (char ']') timestamp
+
 timestamp :: Parser OrgDateTime
 timestamp = OrgDateTime
   <$> date
@@ -443,10 +466,10 @@ dow = choice
   , Sunday    <$ string "Sun" ]
 
 timeRange :: Parser OrgTime
-timeRange = OrgTime <$> t <*> optional (char '-' *> t)
-  where
-    t :: Parser TimeOfDay
-    t = do
+timeRange = OrgTime <$> timeOfDay <*> optional (char '-' *> timeOfDay)
+
+timeOfDay :: Parser TimeOfDay
+timeOfDay = do
       h <- decimal
       void $ char ':'
       m <- decimal
@@ -664,12 +687,13 @@ prettyOrg' depth (OrgDoc bs ss) =
   T.intercalate "\n\n" $ map prettyBlock bs <> map (prettySection depth) ss
 
 prettySection :: Int -> Section -> Text
-prettySection depth (Section td pr ws ts cl dl sc tm ps od) =
+prettySection depth (Section td pr ws ts cl dl sc tm lb ps od) =
   T.intercalate "\n" $ catMaybes
   [ Just headig
   , stamps
   , time <$> tm
   , props
+  , logs
   , Just subdoc ]
   where
     pr' :: Priority -> Text
@@ -706,6 +730,22 @@ prettySection depth (Section td pr ws ts cl dl sc tm ps od) =
     time :: OrgDateTime -> Text
     time x = "<" <> prettyDateTime x <> ">"
 
+    lentry :: (OrgDateTime, Maybe (OrgDateTime, Maybe TimeOfDay)) -> Text
+    lentry (start, mend)
+      = indent
+      <> renderStart start
+      <> mrender (\(end, mdiff) -> renderEnd end <> mrender renderTOD mdiff) mend
+      where
+        mrender = maybe ""
+        renderTOD d = " => " <> prettyTimeOfDay d
+        renderEnd e = "--[" <> prettyDateTime e <> "]"
+        renderStart s = "CLOCK: [" <> prettyDateTime s <> "]"
+
+    logs :: Maybe Text
+    logs
+      | null lb = Nothing
+      | otherwise = Just . T.intercalate "\n" $ (indent <> ":LOGBOOK:") : (lentry <$> lb) <> [indent <> ":END:"]
+
     props :: Maybe Text
     props
       | null ps = Nothing
@@ -728,10 +768,11 @@ prettyDateTime (OrgDateTime d w t rep del) =
     w' = T.pack . take 3 $ show w
 
 prettyTime :: OrgTime -> Text
-prettyTime (OrgTime s me) = tod s <> maybe "" (\e -> "-" <> tod e) me
+prettyTime (OrgTime s me) = prettyTimeOfDay s <> maybe "" (\e -> "-" <> prettyTimeOfDay e) me
   where
-    tod :: TimeOfDay -> Text
-    tod (TimeOfDay h m _) = T.pack $ printf "%02d:%02d" h m
+
+prettyTimeOfDay :: TimeOfDay -> Text
+prettyTimeOfDay (TimeOfDay h m _) = T.pack $ printf "%02d:%02d" h m
 
 prettyRepeat :: Repeater -> Text
 prettyRepeat (Repeater m v i) = m' <> T.pack (show v) <> prettyInterval i
