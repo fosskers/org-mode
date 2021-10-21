@@ -48,6 +48,6 @@ test-suite org-mode-test
   ghc-options:    -threaded -rtsopts -with-rtsopts=-N
   build-depends:
     , org-mode
-    , tasty        ^>=1.2
+    , tasty        >=1.2 && < 1.5
     , tasty-hunit  ^>=0.10
     , time         >=1.9
