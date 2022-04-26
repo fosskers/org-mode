@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1 (2022-04-26)
+
+#### Added
+
+- GHC 9 support.
+
 ## 2.0.0 (2021-06-04)
 
 This release sees the extension of this library to understand heading
