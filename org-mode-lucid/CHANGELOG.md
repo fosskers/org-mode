@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.3 (2022-07-17)
+
+#### Fixed
+
+- Account for `\n\n` gaps in Quote blocks.
+
 ## 1.6.2 (2022-04-26)
 
 #### Added

@@ -153,7 +153,7 @@ sectionHTML os depth (Section _ _ ws _ _ _ _ _ _ od) = sectionStyling os depth t
 
 blockHTML :: OrgStyle -> Block -> Html ()
 blockHTML os b = case b of
-  Quote t                  -> blockquote_ . p_ $ toHtml t
+  Quote t                  -> blockquote_ . traverse_ (p_ . toHtml) $ T.splitOn "\n\n" t
   Example t | bootstrap os -> pre_ [class_ "example"] $ toHtml t
             | bulma os     -> pre_ [class_ "box"] $ toHtml t
             | otherwise    -> pre_ $ toHtml t
