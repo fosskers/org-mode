@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.4 (2022-07-31)
+
+#### Changed
+
+- GHC 9.2 support.
+
 ## 1.6.3 (2022-07-17)
 
 #### Fixed
