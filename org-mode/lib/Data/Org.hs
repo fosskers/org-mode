@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TupleSections      #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 -- |
 -- Module    : Data.Org
@@ -87,8 +89,8 @@ import           GHC.Generics (Generic)
 import           System.FilePath (takeExtension)
 import           Text.Megaparsec hiding (sepBy1, sepEndBy1, some, someTill)
 import           Text.Megaparsec.Char
-import           Text.Megaparsec.Char.Lexer (decimal)
 import qualified Text.Megaparsec.Char.Lexer as L
+import           Text.Megaparsec.Char.Lexer (decimal)
 import           Text.Printf (printf)
 
 --------------------------------------------------------------------------------
@@ -144,6 +146,7 @@ data Block
   | Example Text
   | Code (Maybe Language) Text
   | List ListItems
+  | FancyList FancyItems
   | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Ord, Show, Generic)
@@ -291,6 +294,15 @@ newtype Priority = Priority { priority :: Text }
 -- - Feed the elephant
 -- @
 newtype ListItems = ListItems (NonEmpty Item)
+  deriving stock (Eq, Ord, Show, Generic)
+
+data FancyItems = FancyItems FancyType (NonEmpty FancyItem)
+  deriving stock (Eq, Ord, Show, Generic)
+
+data FancyType = Bullet | Star | Numbered
+  deriving stock (Eq, Ord, Show, Generic)
+
+data FancyItem = FancyItem (NonEmpty Words) (Maybe FancyItems)
   deriving stock (Eq, Ord, Show, Generic)
 
 -- | A line in a bullet-list. Can contain sublists, as shown in `ListItems`.
@@ -758,6 +770,7 @@ prettyInterval i = case i of
   Month -> "m"
   Year  -> "y"
 
+-- | Render a `Block` into the original text form it was parsed from (or equivalent).
 prettyBlock :: Block -> Text
 prettyBlock o = case o of
   Code l t -> "#+begin_src" <> maybe "" (\(Language l') -> " " <> l' <> "\n") l
@@ -765,8 +778,9 @@ prettyBlock o = case o of
     <> "\n#+end_src"
   Quote t -> "#+begin_quote\n" <> t <> "\n#+end_quote"
   Example t -> "#+begin_example\n" <> t <> "\n#+end_example"
-  Paragraph ht -> par ht
+  Paragraph ht -> prettyWordGroups ht
   List items -> lis 0 items
+  FancyList items -> prettyList items
   Table rows -> T.intercalate "\n" . map row $ NEL.toList rows
   where
     lis :: Int -> ListItems -> Text
@@ -774,12 +788,40 @@ prettyBlock o = case o of
 
     f :: Int -> Item -> Text
     f indent (Item ws li) =
-      T.replicate indent " " <> "- " <> par ws
+      T.replicate indent " " <> "- " <> prettyWordGroups ws
       <> maybe "" (\is -> "\n" <> lis (indent + 2) is) li
 
-    par :: NonEmpty Words -> Text
-    par (h :| t) = prettyWords h <> para h t
+    row :: Row -> Text
+    row Break    = "|-|"
+    row (Row cs) = "| " <> (T.intercalate " | " . map col $ NEL.toList cs) <> " |"
 
+    col :: Column -> Text
+    col Empty       = ""
+    col (Column ws) = T.unwords . map prettyWords $ NEL.toList ws
+
+prettyList :: FancyItems -> Text
+prettyList = T.unlines . prettyListWork 0
+
+prettyListWork :: Int -> FancyItems -> [Text]
+prettyListWork indent (FancyItems t is) = concatMap (uncurry prettyItem) . relabel $ NEL.toList is
+  where
+    relabel :: [FancyItem] -> [(Text, FancyItem)]
+    relabel = case t of
+      Bullet   -> map ("-",)
+      Star     -> map ("*",)
+      Numbered -> zipWith (\n i -> (tshow n <> ".", i)) ([1..] :: [Int])
+
+    prettyItem :: Text -> FancyItem -> [Text]
+    prettyItem lbl (FancyItem ws sub) = real : maybe [] (prettyListWork $ succ indent) sub
+      where
+        real = prefix <> lbl <> " " <> prettyWordGroups ws
+
+    prefix :: Text
+    prefix = T.replicate (2 * indent) " "
+
+prettyWordGroups :: NonEmpty Words -> Text
+prettyWordGroups (h :| t) = prettyWords h <> para h t
+  where
     -- | Stick punctuation directly behind the chars in front of it, while
     -- paying special attention to parentheses.
     para :: Words -> [Words] -> Text
@@ -790,14 +832,6 @@ prettyBlock o = case o of
         Punct '(' -> " " <> prettyWords w <> para w ws
         Punct _   -> prettyWords w <> para w ws
         _         -> " " <> prettyWords w <> para w ws
-
-    row :: Row -> Text
-    row Break    = "|-|"
-    row (Row cs) = "| " <> (T.intercalate " | " . map col $ NEL.toList cs) <> " |"
-
-    col :: Column -> Text
-    col Empty       = ""
-    col (Column ws) = T.unwords . map prettyWords $ NEL.toList ws
 
 prettyWords :: Words -> Text
 prettyWords w = case w of
@@ -812,3 +846,6 @@ prettyWords w = case w of
   Image (URL url)         -> "[[" <> url <> "]]"
   Punct c                 -> T.singleton c
   Plain t                 -> t
+
+tshow :: Show a => a -> Text
+tshow = T.pack . show

@@ -91,6 +91,24 @@ I think (*we should* be bold *about*) our decisions.
 - Mapbox VectorTile codecs ([[https://github.com/fosskers/vectortiles][Haskell]], [[https://github.com/locationtech/geotrellis/tree/master/vectortile][Scala]])
 - [[https://github.com/fosskers/scalaz-and-cats][ScalaZ and Cats Comparison]] and the [[https://github.com/fosskers/scala-benchmarks][Scala Collections Benchmarks]]
 
+* List with numbers
+
+1. Meditate.
+2. ???
+3. Reach Nirvana.
+
+** Irritating List
+
+1. First thing.
+   - Sub point.
+     1. But
+     2. And
+     3. Further
+   - Another thing.
+2. Second thing.
+3. Third thing.
+   - But did you consider this?
+
 * Some Tables
 
 | A | B | C |
