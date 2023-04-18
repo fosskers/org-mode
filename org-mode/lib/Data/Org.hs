@@ -72,6 +72,7 @@ module Data.Org
 import           Control.Applicative.Combinators.NonEmpty
 import           Control.Monad (void, when)
 import           Data.Bool (bool)
+import           Data.Char (isDigit)
 import           Data.Functor (($>))
 import           Data.Hashable (Hashable)
 import           Data.List.NonEmpty (NonEmpty(..))
@@ -299,7 +300,7 @@ newtype ListItems = ListItems (NonEmpty Item)
 data FancyItems = FancyItems FancyType (NonEmpty FancyItem)
   deriving stock (Eq, Ord, Show, Generic)
 
-data FancyType = Bullet | Star | Numbered
+data FancyType = Bulleted | Starred | Numbered
   deriving stock (Eq, Ord, Show, Generic)
 
 data FancyItem = FancyItem (NonEmpty Words) (Maybe FancyItems)
@@ -385,6 +386,7 @@ orgP' depth = L.lexeme space $ OrgDoc
       , try example
       , try quote
       , try list
+      , try fancyList
       , try table
       , paragraph ]  -- TODO Paragraph needs to fail if it detects a heading.
 
@@ -526,6 +528,50 @@ code = L.lexeme space $ do
     top = string "#+" *> (string "BEGIN_SRC" <|> string "begin_src")
     bot = string "#+" *> (string "END_SRC" <|> string "end_src")
     lng = char ' '  *> someTillEnd
+
+fancyList :: Parser Block
+fancyList = L.lexeme space . fmap FancyList $ fancyChoice 0
+
+fancyChoice :: Int -> Parser FancyItems
+fancyChoice indent = fancyBullets indent <|> fancyStars indent <|> fancyNumbered indent
+
+fancyBullets :: Int -> Parser FancyItems
+fancyBullets indent = FancyItems Bulleted <$> fancyItems (string "- ") indent
+
+fancyStars :: Int -> Parser FancyItems
+fancyStars indent = FancyItems Starred <$> fancyItems (string "* ") indent
+
+fancyNumbered :: Int -> Parser FancyItems
+fancyNumbered indent = FancyItems Numbered <$> fancyItems numd indent
+  where
+    numd = (decimal :: Parser Word) *> string ". "
+
+fancyItems :: Parser a -> Int -> Parser (NonEmpty FancyItem)
+fancyItems tick indent = sepBy1 (fancyItem tick indent) $ try next
+  where
+    next = newline *> lookAhead (nextFancy tick indent)
+
+nextFancy :: Parser a -> Int -> Parser a
+nextFancy tick indent = string (T.replicate indent " ") *> tick
+
+fancyItem :: Parser a -> Int -> Parser FancyItem
+fancyItem tick indent = do
+  void . string $ T.replicate indent " "
+  void tick
+  l <- content
+  let !nextInd = indent + 2
+  FancyItem l <$> optional (try $ newline *> fancyChoice nextInd)
+  where
+    content :: Parser (NonEmpty Words)
+    content = do
+      l <- line '\n'
+      try (lookAhead keepGoing *> space *> ((l <>) <$> content)) <|> pure l
+
+    keepGoing :: Parser ()
+    keepGoing = void $ char '\n' *> manyOf ' ' *> satisfy notItem
+
+    notItem :: Char -> Bool
+    notItem c = c /= '\n' && c /= '-' && c /= '*' && not (isDigit c)
 
 list :: Parser Block
 list = L.lexeme space $ List <$> listItems 0
@@ -807,8 +853,8 @@ prettyListWork indent (FancyItems t is) = concatMap (uncurry prettyItem) . relab
   where
     relabel :: [FancyItem] -> [(Text, FancyItem)]
     relabel = case t of
-      Bullet   -> map ("-",)
-      Star     -> map ("*",)
+      Bulleted -> map ("-",)
+      Starred  -> map ("*",)
       Numbered -> zipWith (\n i -> (tshow n <> ".", i)) ([1..] :: [Int])
 
     prettyItem :: Text -> FancyItem -> [Text]
