@@ -284,33 +284,33 @@ suite simple full = testGroup "Unit Tests"
 
      , testCase "List - Single Indent"
       $ testPretty list "List" "- A\n  - B"
-      $ List (ListItems [Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])])
+      $ List (ListItems Bulleted [Item [Plain "A"] (Just $ ListItems Bulleted [Item [Plain "B"] Nothing])])
 
     , testCase "List - Indent and Back"
       $ testPretty list "List" "- A\n  - B\n- C"
-      $ List (ListItems
-               [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])
+      $ List (ListItems Bulleted
+               [ Item [Plain "A"] (Just $ ListItems Bulleted [Item [Plain "B"] Nothing])
                , Item [Plain "C"] Nothing ])
 
     , testCase "List - Double Indent and Back"
       $ testPretty list "List" "- A\n  - B\n  - C\n- D"
-      $ List (ListItems
-               [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing, Item [Plain "C"] Nothing])
+      $ List (ListItems Bulleted
+               [ Item [Plain "A"] (Just $ ListItems Bulleted [Item [Plain "B"] Nothing, Item [Plain "C"] Nothing])
                , Item [Plain "D"] Nothing ])
 
     , testCase "List - Things after" $ parseMaybe orgP "- A\n  - B\n- C\n\nD"
-      @?= Just (OrgDoc [ List (ListItems
-                               [ Item [Plain "A"] (Just $ ListItems [Item [Plain "B"] Nothing])
+      @?= Just (OrgDoc [ List (ListItems Bulleted
+                               [ Item [Plain "A"] (Just $ ListItems Bulleted [Item [Plain "B"] Nothing])
                                , Item [Plain "C"] Nothing])
                        , Paragraph [Plain "D"]] [])
 
     , testCase "List - Multiline"
       $ testPretty list "List" "- A\n  B\n- C"
-      $ List (ListItems [Item [Plain "A", Plain "B"] Nothing, Item [Plain "C"] Nothing])
+      $ List (ListItems Bulleted [Item [Plain "A", Plain "B"] Nothing, Item [Plain "C"] Nothing])
 
     , testCase "List - Special Parens"
       $ testPretty list "List" "- The [[https://github.com/kadena-io/chainweb-node][A]] (core developer)\n- B"
-      $ List (ListItems
+      $ List (ListItems Bulleted
               [ Item [Plain "The", Link (URL "https://github.com/kadena-io/chainweb-node") (Just "A"), Punct '(', Plain "core", Plain "developer)"] Nothing
               , Item [Plain "B"] Nothing ]
              )

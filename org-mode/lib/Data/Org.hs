@@ -40,6 +40,7 @@ module Data.Org
   , Block(..)
   , Words(..)
   , ListItems(..)
+  , ListType(..)
   , Item(..)
   , Row(..)
   , Column(..)
@@ -147,7 +148,6 @@ data Block
   | Example Text
   | Code (Maybe Language) Text
   | List ListItems
-  | FancyList FancyItems
   | Table (NonEmpty Row)
   | Paragraph (NonEmpty Words)
   deriving stock (Eq, Ord, Show, Generic)
@@ -283,27 +283,21 @@ data Todo = TODO | DONE
 newtype Priority = Priority { priority :: Text }
   deriving stock (Eq, Ord, Show, Generic)
 
--- | An org list constructed of @-@ characters.
+-- | An org list constructed of @-@ or @+@ characters, or numbers.
 --
 -- @
--- - Feed the cat
---   - The good stuff
--- - Feed the dog
---   - He'll eat anything
--- - Feed the bird
--- - Feed the alligator
--- - Feed the elephant
+-- 1. Feed the cat
+--    - The good stuff
+-- 2. Feed the dog
+--    - He'll eat anything
+-- 3. Feed the bird
+-- 4. Feed the alligator
+-- 5. Feed the elephant
 -- @
-newtype ListItems = ListItems (NonEmpty Item)
+data ListItems = ListItems ListType (NonEmpty Item)
   deriving stock (Eq, Ord, Show, Generic)
 
-data FancyItems = FancyItems FancyType (NonEmpty FancyItem)
-  deriving stock (Eq, Ord, Show, Generic)
-
-data FancyType = Bulleted | Plussed | Numbered
-  deriving stock (Eq, Ord, Show, Generic)
-
-data FancyItem = FancyItem (NonEmpty Words) (Maybe FancyItems)
+data ListType = Bulleted | Plussed | Numbered
   deriving stock (Eq, Ord, Show, Generic)
 
 -- | A line in a bullet-list. Can contain sublists, as shown in `ListItems`.
@@ -386,7 +380,6 @@ orgP' depth = L.lexeme space $ OrgDoc
       , try example
       , try quote
       , try list
-      , try fancyList
       , try table
       , paragraph ]  -- TODO Paragraph needs to fail if it detects a heading.
 
@@ -529,38 +522,44 @@ code = L.lexeme space $ do
     bot = string "#+" *> (string "END_SRC" <|> string "end_src")
     lng = char ' '  *> someTillEnd
 
-fancyList :: Parser Block
-fancyList = L.lexeme space . fmap FancyList $ fancyChoice 0
+list :: Parser Block
+list = L.lexeme space . fmap List $ itemChoice 0
 
-fancyChoice :: Int -> Parser FancyItems
-fancyChoice indent = fancyBullets indent <|> fancyStars indent <|> fancyNumbered indent
+itemChoice :: Int -> Parser ListItems
+itemChoice indent = bulleted
+ indent <|> starred indent <|> numbered indent
 
-fancyBullets :: Int -> Parser FancyItems
-fancyBullets indent = FancyItems Bulleted <$> fancyItems (string "- ") indent
+bulleted :: Int -> Parser ListItems
+bulleted
+ indent = ListItems Bulleted <$> listItems (string "- ") indent
 
-fancyStars :: Int -> Parser FancyItems
-fancyStars indent = FancyItems Plussed <$> fancyItems (string "+ ") indent
+starred :: Int -> Parser ListItems
+starred indent = ListItems Plussed <$> listItems (string "+ ") indent
 
-fancyNumbered :: Int -> Parser FancyItems
-fancyNumbered indent = FancyItems Numbered <$> fancyItems numd indent
+numbered :: Int -> Parser ListItems
+numbered indent = ListItems Numbered <$> listItems numd indent
   where
     numd = (decimal :: Parser Word) *> string ". "
 
-fancyItems :: Parser a -> Int -> Parser (NonEmpty FancyItem)
-fancyItems tick indent = sepBy1 (fancyItem tick indent) $ try next
+listItems :: Parser a -> Int -> Parser (NonEmpty Item)
+listItems tick indent = sepBy1 (item tick indent) $ try next
   where
-    next = newline *> lookAhead (nextFancy tick indent)
+    next = newline *> lookAhead (nextItem tick indent)
 
-nextFancy :: Parser a -> Int -> Parser a
-nextFancy tick indent = string (T.replicate indent " ") *> tick
+nextItem :: Parser a -> Int -> Parser a
+nextItem tick indent = string (T.replicate indent " ") *> tick
 
-fancyItem :: Parser a -> Int -> Parser FancyItem
-fancyItem tick indent = do
+-- | Conditions for ending the current bullet:
+--
+-- 1. You find two '\n' at the end of a line.
+-- 2. The first two non-space characters of the next line mark the start of a point, like "- ".
+item :: Parser a -> Int -> Parser Item
+item tick indent = do
   void . string $ T.replicate indent " "
   void tick
   l <- content
   let !nextInd = indent + 2
-  FancyItem l <$> optional (try $ newline *> fancyChoice nextInd)
+  Item l <$> optional (try $ newline *> itemChoice nextInd)
   where
     content :: Parser (NonEmpty Words)
     content = do
@@ -572,38 +571,6 @@ fancyItem tick indent = do
 
     notItem :: Char -> Bool
     notItem c = c /= '\n' && c /= '-' && c /= '+' && not (isDigit c)
-
-list :: Parser Block
-list = L.lexeme space $ List <$> listItems 0
-
-listItems :: Int -> Parser ListItems
-listItems indent = ListItems
-  <$> sepBy1 (item indent) (try $ newline *> lookAhead (nextItem indent))
-
-nextItem :: Int -> Parser ()
-nextItem indent = do
-  void . string $ T.replicate indent " "
-  void $ string "- "
-
--- | Conditions for ending the current bullet:
---
--- 1. You find two '\n' at the end of a line.
--- 2. The first two non-space characters of the next line are "- ".
-item :: Int -> Parser Item
-item indent = do
-  leading <- string $ T.replicate indent " "
-  void $ string "- "
-  l <- bullet
-  let !nextInd = T.length leading + 2
-  Item l <$> optional (try $ newline *> listItems nextInd)
-  where
-    bullet :: Parser (NonEmpty Words)
-    bullet = do
-      l <- line '\n'
-      try (lookAhead keepGoing *> space *> ((l <>) <$> bullet)) <|> pure l
-
-    keepGoing :: Parser ()
-    keepGoing = void $ char '\n' *> manyOf ' ' *> noneOf ['-', '\n']
 
 table :: Parser Block
 table = L.lexeme space $ Table <$> sepEndBy1 row (char '\n')
@@ -825,18 +792,9 @@ prettyBlock o = case o of
   Quote t -> "#+begin_quote\n" <> t <> "\n#+end_quote"
   Example t -> "#+begin_example\n" <> t <> "\n#+end_example"
   Paragraph ht -> prettyWordGroups ht
-  List items -> lis 0 items
-  FancyList items -> prettyList items
+  List items -> prettyList items
   Table rows -> T.intercalate "\n" . map row $ NEL.toList rows
   where
-    lis :: Int -> ListItems -> Text
-    lis indent (ListItems is) = T.intercalate "\n" . map (f indent) $ NEL.toList is
-
-    f :: Int -> Item -> Text
-    f indent (Item ws li) =
-      T.replicate indent " " <> "- " <> prettyWordGroups ws
-      <> maybe "" (\is -> "\n" <> lis (indent + 2) is) li
-
     row :: Row -> Text
     row Break    = "|-|"
     row (Row cs) = "| " <> (T.intercalate " | " . map col $ NEL.toList cs) <> " |"
@@ -845,20 +803,20 @@ prettyBlock o = case o of
     col Empty       = ""
     col (Column ws) = T.unwords . map prettyWords $ NEL.toList ws
 
-prettyList :: FancyItems -> Text
+prettyList :: ListItems -> Text
 prettyList = T.unlines . prettyListWork 0
 
-prettyListWork :: Int -> FancyItems -> [Text]
-prettyListWork indent (FancyItems t is) = concatMap (uncurry prettyItem) . relabel $ NEL.toList is
+prettyListWork :: Int -> ListItems -> [Text]
+prettyListWork indent (ListItems t is) = concatMap (uncurry prettyItem) . relabel $ NEL.toList is
   where
-    relabel :: [FancyItem] -> [(Text, FancyItem)]
+    relabel :: [Item] -> [(Text, Item)]
     relabel = case t of
       Bulleted -> map ("-",)
       Plussed  -> map ("+",)
       Numbered -> zipWith (\n i -> (tshow n <> ".", i)) ([1..] :: [Int])
 
-    prettyItem :: Text -> FancyItem -> [Text]
-    prettyItem lbl (FancyItem ws sub) = real : maybe [] (prettyListWork $ succ indent) sub
+    prettyItem :: Text -> Item -> [Text]
+    prettyItem lbl (Item ws sub) = real : maybe [] (prettyListWork $ succ indent) sub
       where
         real = prefix <> lbl <> " " <> prettyWordGroups ws
 
