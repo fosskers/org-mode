@@ -184,10 +184,15 @@ paragraphHTML os (h :| t) = wordsHTML h <> para h t
         _         -> sep <> wordsHTML w <> para w ws
 
 listItemsHTML :: OrgStyle -> ListItems -> Html ()
-listItemsHTML os (ListItems is) = ul_ [class_ "org-ul"] $ traverse_ f is
+listItemsHTML os (ListItems t is) = orderedOrNot [class_ "org-ul"] $ traverse_ f is
   where
     f :: Item -> Html ()
     f (Item ws next) = li_ $ paragraphHTML os ws >> traverse_ (listItemsHTML os) next
+
+    orderedOrNot = case t of
+      Numbered -> ol_
+      Bulleted -> ul_
+      Plussed  -> ul_
 
 tableHTML :: OrgStyle -> NonEmpty Row -> Html ()
 tableHTML os rs = table_ tblClasses $ do
