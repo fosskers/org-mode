@@ -300,7 +300,7 @@ newtype ListItems = ListItems (NonEmpty Item)
 data FancyItems = FancyItems FancyType (NonEmpty FancyItem)
   deriving stock (Eq, Ord, Show, Generic)
 
-data FancyType = Bulleted | Starred | Numbered
+data FancyType = Bulleted | Plussed | Numbered
   deriving stock (Eq, Ord, Show, Generic)
 
 data FancyItem = FancyItem (NonEmpty Words) (Maybe FancyItems)
@@ -539,7 +539,7 @@ fancyBullets :: Int -> Parser FancyItems
 fancyBullets indent = FancyItems Bulleted <$> fancyItems (string "- ") indent
 
 fancyStars :: Int -> Parser FancyItems
-fancyStars indent = FancyItems Starred <$> fancyItems (string "* ") indent
+fancyStars indent = FancyItems Plussed <$> fancyItems (string "+ ") indent
 
 fancyNumbered :: Int -> Parser FancyItems
 fancyNumbered indent = FancyItems Numbered <$> fancyItems numd indent
@@ -571,7 +571,7 @@ fancyItem tick indent = do
     keepGoing = void $ char '\n' *> manyOf ' ' *> satisfy notItem
 
     notItem :: Char -> Bool
-    notItem c = c /= '\n' && c /= '-' && c /= '*' && not (isDigit c)
+    notItem c = c /= '\n' && c /= '-' && c /= '+' && not (isDigit c)
 
 list :: Parser Block
 list = L.lexeme space $ List <$> listItems 0
@@ -854,7 +854,7 @@ prettyListWork indent (FancyItems t is) = concatMap (uncurry prettyItem) . relab
     relabel :: [FancyItem] -> [(Text, FancyItem)]
     relabel = case t of
       Bulleted -> map ("-",)
-      Starred  -> map ("*",)
+      Plussed  -> map ("+",)
       Numbered -> zipWith (\n i -> (tshow n <> ".", i)) ([1..] :: [Int])
 
     prettyItem :: Text -> FancyItem -> [Text]
