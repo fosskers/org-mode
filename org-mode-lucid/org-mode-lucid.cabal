@@ -1,6 +1,6 @@
 cabal-version:      2.2
 name:               org-mode-lucid
-version:            1.6.4
+version:            1.7.0
 synopsis:           Lucid integration for org-mode.
 description:        Lucid integration for org-mode.
 category:           Web
@@ -28,7 +28,7 @@ common commons
     , containers  >=0.6
     , hashable    >=1.2  && <1.5
     , lucid       >=2.9  && < 2.12
-    , org-mode    ^>=2.0
+    , org-mode    ^>=2.1
     , text
 
 library

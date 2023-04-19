@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.0 (2023-04-19)
+
+#### Changed
+
+- Support numbered lists.
+
 ## 2.0.2 (2022-07-31)
 
 #### Changed

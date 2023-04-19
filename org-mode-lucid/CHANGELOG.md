@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.0 (2023-04-19)
+
+#### Changed
+
+- Match `org-mode-2.1`.
+
 ## 1.6.4 (2022-07-31)
 
 #### Changed
