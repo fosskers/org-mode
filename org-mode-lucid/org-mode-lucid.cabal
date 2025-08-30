@@ -26,7 +26,7 @@ common commons
   build-depends:
     , base        >=4.12 && <5
     , containers  >=0.6
-    , hashable    >=1.2  && <1.5
+    , hashable    >=1.2  && <1.6
     , lucid       >=2.9  && < 2.12
     , org-mode    ^>=2.1
     , text
