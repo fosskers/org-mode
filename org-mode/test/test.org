@@ -2,6 +2,9 @@
 #+DATE: 2020-02-17
 #+AUTHOR: Colin
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="../assets/org-theme.css"/>
+# Headers for LaTeX export:
+#+LATEX_HEADER: \docid{test}
+#+LATEX_HEADER: \docrev{3}
 
 Some text before the initial heading.
 
