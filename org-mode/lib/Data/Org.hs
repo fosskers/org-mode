@@ -100,7 +100,7 @@ import           Text.Printf (printf)
 
 -- | A complete @.org@ file with metadata.
 data OrgFile = OrgFile
-  { orgMeta :: M.Map Text Text
+  { orgMeta :: M.Map Text [Text]
   -- ^ Top-level fields like:
   --
   -- @
@@ -108,6 +108,8 @@ data OrgFile = OrgFile
   -- #+DATE: 2020-02-25
   -- #+AUTHOR: Colin
   -- @
+  --
+  -- Top-level fields can be repeated, thus the value is a list.
   , orgDoc  :: OrgDoc }
   deriving stock (Eq, Ord, Show, Generic)
 
@@ -355,16 +357,19 @@ type Parser = Parsec Void Text
 orgFile :: Parser OrgFile
 orgFile = space *> L.lexeme space (OrgFile <$> meta <*> orgP) <* eof
 
-meta :: Parser (M.Map Text Text)
-meta = L.lexeme space $ M.fromList <$> keyword `sepEndBy` newline
+meta :: Parser (M.Map Text [Text])
+meta = L.lexeme space
+       $ M.fromListWith (<>) . reverse . catMaybes
+       <$> (keyword <|> comment) `sepEndBy` newline
   where
-    keyword :: Parser (Text, Text)
+    keyword :: Parser (Maybe (Text, [Text]))
     keyword = do
       void $ string "#+"
       key <- someTill' ':'
       void $ string ": "
       val <- someTillEnd
-      pure (key, val)
+      pure $ Just (key, [val])
+    comment = string "#" >> someTillEnd >> pure Nothing
 
 orgP :: Parser OrgDoc
 orgP = orgP' 1
@@ -678,7 +683,8 @@ prettyOrgFile :: OrgFile -> Text
 prettyOrgFile (OrgFile m os) = metas <> "\n\n" <> prettyOrg os
   where
     metas = T.intercalate "\n"
-      $ map (\(l, t) -> "#+" <> l <> ": " <> t)
+      $ concat
+      $ map (\(l, ts) -> (("#+" <> l <> ": ") <>) <$> ts)
       $ M.toList m
 
 prettyOrg :: OrgDoc -> Text

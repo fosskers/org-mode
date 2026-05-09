@@ -337,10 +337,10 @@ suite simple full = testGroup "Unit Tests"
 
     , testCase "Meta - Title"
       $ testPretty meta "Meta" "#+TITLE: Test"
-      [("TITLE", "Test")]
+      [("TITLE", ["Test"])]
     , testCase "Meta - Full"
       $ testPretty meta "Meta" "#+TITLE: Test\n#+DATE: 2020-02-17\n#+AUTHOR: Colin"
-      [("TITLE", "Test"), ("DATE", "2020-02-17"), ("AUTHOR", "Colin")]
+      [("TITLE", ["Test"]), ("DATE", ["2020-02-17"]), ("AUTHOR", ["Colin"])]
     ]
   , testGroup "Pretty Printing"
     [ testCase "Punctuation" $ do
