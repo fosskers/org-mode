@@ -500,8 +500,8 @@ quote = L.lexeme space $ do
   ls <- manyTill (manyTillEnd <* newline) bot
   pure . Quote $ T.intercalate "\n" ls
   where
-    top = string "#+" *> (string "BEGIN_QUOTE" <|> string "begin_quote")
-    bot = string "#+" *> (string "END_QUOTE" <|> string "end_quote")
+    top = hspace *> string "#+" *> (string "BEGIN_QUOTE" <|> string "begin_quote")
+    bot = try (hspace *> string "#+" *> (string "END_QUOTE" <|> string "end_quote"))
 
 example :: Parser Block
 example = L.lexeme space $ do
@@ -509,8 +509,8 @@ example = L.lexeme space $ do
   ls <- manyTill (manyTillEnd <* newline) bot
   pure . Example $ T.intercalate "\n" ls
   where
-    top = string "#+" *> (string "BEGIN_EXAMPLE" <|> string "begin_example")
-    bot = string "#+" *> (string "END_EXAMPLE" <|> string "end_example")
+    top = hspace *> string "#+" *> (string "BEGIN_EXAMPLE" <|> string "begin_example")
+    bot = try (hspace *> string "#+" *> (string "END_EXAMPLE" <|> string "end_example"))
 
 code :: Parser Block
 code = L.lexeme space $ do
@@ -518,16 +518,15 @@ code = L.lexeme space $ do
   ls <- manyTill (manyTillEnd <* newline) bot
   pure . Code (Language <$> lang) $ T.intercalate "\n" ls
   where
-    top = string "#+" *> (string "BEGIN_SRC" <|> string "begin_src")
-    bot = string "#+" *> (string "END_SRC" <|> string "end_src")
+    top = hspace *> string "#+" *> (string "BEGIN_SRC" <|> string "begin_src")
+    bot = try (hspace *> string "#+" *> (string "END_SRC" <|> string "end_src"))
     lng = char ' '  *> someTillEnd
 
 list :: Parser Block
 list = L.lexeme space . fmap List $ itemChoice 0
 
 itemChoice :: Int -> Parser ListItems
-itemChoice indent = bulleted
- indent <|> starred indent <|> numbered indent
+itemChoice indent = bulleted indent <|> starred indent <|> numbered indent
 
 bulleted :: Int -> Parser ListItems
 bulleted

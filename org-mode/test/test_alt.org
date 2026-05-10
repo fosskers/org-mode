@@ -17,21 +17,21 @@ one would be lonely...
  
   So we'll make /a second one/. How about some code?
 
-#+begin_src haskell
+  #+begin_src haskell
   -- | Very complicated.
   main :: IO ()
   main = putStrLn "org-mode tests"
-#+end_src
+  #+end_src
 
 ** More                                                                :tag2:
 
 And a quote.
  	  
-#+begin_quote
+  #+begin_quote
 Always keep some cash on hand, you never know.
 
 - Albert Einstein
-#+end_quote
+  #+end_quote
 
 ** Not a tag! :)
 
