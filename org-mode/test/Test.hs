@@ -21,10 +21,14 @@ main :: IO ()
 main = do
   simple <- T.readFile "test/simple.org"
   full   <- T.readFile "test/test.org"
+  full'  <- T.readFile "test/test_alt.org"
   -- let fl = parseMaybe orgFile full
   -- pPrintNoColor fl
   -- maybe (putStrLn "COULDN'T PARSE") T.putStrLn $ prettyOrgFile <$> fl
-  defaultMain $ suite simple full
+  defaultMain $ testGroup "Org tests"
+    [ suite simple full
+    , testCase "Equivalence" $ org full @?= org full'
+    ]
 
 suite :: T.Text -> T.Text -> TestTree
 suite simple full = testGroup "Unit Tests"

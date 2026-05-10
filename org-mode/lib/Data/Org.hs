@@ -593,7 +593,7 @@ table = L.lexeme space $ Table <$> sepEndBy1 row (char '\n')
 paragraph :: Parser Block
 paragraph = L.lexeme space $ do
   notFollowedBy heading
-  Paragraph . sconcat <$> sepEndBy1 (line '\n') newline
+  Paragraph . sconcat <$> sepEndBy1 (line '\n') (eol <* hspace)
 
 headerLine :: Parser (Maybe Todo, Maybe Priority, NonEmpty Words, Maybe (NonEmpty Text))
 headerLine = do
