@@ -18,7 +18,7 @@ jobs:
           stack-version: "latest"
 
       - name: Clone project
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Cache dependencies
         uses: actions/cache@v4
